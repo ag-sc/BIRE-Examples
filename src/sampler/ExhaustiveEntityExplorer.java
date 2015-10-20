@@ -13,20 +13,18 @@ import corpus.Token;
 import learning.Model;
 import learning.ObjectiveFunction;
 import learning.Scorer;
-import sampling.AbstractSampler;
+import sampling.Explorer;
 import utility.VariableID;
 import variables.EntityType;
 import variables.MutableEntityAnnotation;
 import variables.State;
 
-public class ExhaustiveEntitySampler extends AbstractSampler<State> {
+public class ExhaustiveEntityExplorer implements Explorer<State> {
 
-	private static Logger log = LogManager.getFormatterLogger(ExhaustiveEntitySampler.class.getName());
+	private static Logger log = LogManager.getFormatterLogger(ExhaustiveEntityExplorer.class.getName());
 	private AnnotationConfig corpusConfig;
 
-	public ExhaustiveEntitySampler(Model<State> model, Scorer<State> scorer, ObjectiveFunction<State> objective,
-			AnnotationConfig corpusConfig) {
-		super(model, scorer, objective);
+	public ExhaustiveEntityExplorer(AnnotationConfig corpusConfig) {
 		this.corpusConfig = corpusConfig;
 	}
 

@@ -7,23 +7,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import changes.StateChange;
-import learning.Model;
-import learning.ObjectiveFunction;
-import learning.Scorer;
 import logging.Log;
-import sampling.AbstractSampler;
+import sampling.Explorer;
 import variables.MutableEntityAnnotation;
 import variables.State;
 
-public class RelationSampler extends AbstractSampler<State> {
+public class RelationExplorer implements Explorer<State> {
 
-	private static Logger log = LogManager.getFormatterLogger(RelationSampler.class.getName());
+	private static Logger log = LogManager.getFormatterLogger(RelationExplorer.class.getName());
 
 	private int numberOfStates;
 
-	public RelationSampler(Model<State> model, Scorer<State> scorer, ObjectiveFunction<State> objective,
-			int numberOfStates) {
-		super(model, scorer, objective);
+	public RelationExplorer(int numberOfStates) {
 		this.numberOfStates = numberOfStates;
 	}
 

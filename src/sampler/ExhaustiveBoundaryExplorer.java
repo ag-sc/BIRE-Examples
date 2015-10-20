@@ -7,21 +7,14 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import learning.Model;
-import learning.ObjectiveFunction;
-import learning.Scorer;
-import sampling.AbstractSampler;
+import sampling.Explorer;
 import utility.VariableID;
 import variables.MutableEntityAnnotation;
 import variables.State;
 
-public class ExhaustiveBoundarySampler extends AbstractSampler<State> {
+public class ExhaustiveBoundaryExplorer implements Explorer<State> {
 
-	private static Logger log = LogManager.getFormatterLogger(ExhaustiveBoundarySampler.class.getName());
-
-	public ExhaustiveBoundarySampler(Model<State> model, Scorer<State> scorer, ObjectiveFunction<State> objective) {
-		super(model, scorer, objective);
-	}
+	private static Logger log = LogManager.getFormatterLogger(ExhaustiveBoundaryExplorer.class.getName());
 
 	public List<State> getNextStates(State previousState) {
 

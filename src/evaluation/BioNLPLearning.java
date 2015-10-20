@@ -22,11 +22,11 @@ import learning.ObjectiveFunction;
 import learning.Scorer;
 import learning.Trainer;
 import objective.DefaultObjectiveFunction;
-import sampler.ExhaustiveBoundarySampler;
-import sampler.ExhaustiveEntitySampler;
-import sampler.RelationSampler;
-import sampling.AbstractSampler;
-import sampling.MultiSampler;
+import sampler.ExhaustiveBoundaryExplorer;
+import sampler.ExhaustiveEntityExplorer;
+import sampler.RelationExplorer;
+import sampling.DefaultSampler;
+import sampling.Explorer;
 import templates.AbstractTemplate;
 import templates.ContextTemplate;
 import templates.MorphologicalTemplate;
@@ -102,11 +102,11 @@ public class BioNLPLearning {
 
 			ObjectiveFunction<State> objective = new DefaultObjectiveFunction();
 
-			List<AbstractSampler<State>> samplers = new ArrayList<>();
-			samplers.add(new ExhaustiveEntitySampler(model, scorer, objective, trainCorpus.getCorpusConfig()));
-			samplers.add(new ExhaustiveBoundarySampler(model, scorer, objective));
-			samplers.add(new RelationSampler(model, scorer, objective, 20));
-			MultiSampler<State> sampler = new MultiSampler<>(samplers);
+			List<Explorer<State>> samplers = new ArrayList<>();
+			samplers.add(new ExhaustiveEntityExplorer(trainCorpus.getCorpusConfig()));
+			samplers.add(new ExhaustiveBoundaryExplorer());
+			samplers.add(new RelationExplorer(20));
+			DefaultSampler<State> sampler = new DefaultSampler<>(model, scorer, objective, samplers);
 
 			Trainer<State> trainer = new Trainer<>(model, scorer, sampler);
 

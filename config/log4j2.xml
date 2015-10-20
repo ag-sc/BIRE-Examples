@@ -53,12 +53,7 @@
 			<AppenderRef ref="Console" />
 			<AppenderRef ref="LogFile" />
 		</Logger>
-		<Logger name="sampling.AbstractSampler" level="DEBUG"
-			additivity="false">
-			<AppenderRef ref="Console" />
-			<AppenderRef ref="LogFile" />
-		</Logger>
-		<Logger name="sampling.MultiSampler" level="DEBUG"
+		<Logger name="sampling.DefaultSampler" level="DEBUG"
 			additivity="false">
 			<AppenderRef ref="Console" />
 			<AppenderRef ref="LogFile" />

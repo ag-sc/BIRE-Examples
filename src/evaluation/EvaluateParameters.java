@@ -23,11 +23,11 @@ import learning.Scorer;
 import learning.Trainer;
 import logging.Log;
 import objective.DefaultObjectiveFunction;
-import sampler.ExhaustiveBoundarySampler;
-import sampler.ExhaustiveEntitySampler;
-import sampler.RelationSampler;
-import sampling.AbstractSampler;
-import sampling.MultiSampler;
+import sampler.ExhaustiveBoundaryExplorer;
+import sampler.ExhaustiveEntityExplorer;
+import sampler.RelationExplorer;
+import sampling.DefaultSampler;
+import sampling.Explorer;
 import sampling.Sampler;
 import templates.AbstractTemplate;
 import templates.ContextTemplate;
@@ -231,11 +231,11 @@ public class EvaluateParameters {
 
 				ObjectiveFunction<State> objective = new DefaultObjectiveFunction();
 
-				List<AbstractSampler<State>> samplers = new ArrayList<>();
-				samplers.add(new ExhaustiveEntitySampler(model, scorer, objective, corpusConfig));
-				samplers.add(new ExhaustiveBoundarySampler(model, scorer, objective));
-				samplers.add(new RelationSampler(model, scorer, objective, 20));
-				MultiSampler<State> sampler = new MultiSampler<>(samplers);
+				List<Explorer<State>> samplers = new ArrayList<>();
+				samplers.add(new ExhaustiveEntityExplorer(corpusConfig));
+				samplers.add(new ExhaustiveBoundaryExplorer());
+				samplers.add(new RelationExplorer(20));
+				DefaultSampler<State> sampler = new DefaultSampler<>(model, scorer, objective, samplers);
 
 				Trainer<State> trainer = new Trainer<>(model, scorer, sampler);
 
