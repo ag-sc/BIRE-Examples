@@ -99,10 +99,10 @@ public class RelationTemplate extends AbstractTemplate<State>implements Serializ
 				e1.getBeginTokenIndex() - e2.getEndTokenIndex() + 1);
 	}
 
-	@Override
-	protected boolean isRelevantChange(StateChange value) {
-		return relevantChanges.contains(value);
-	}
+	// @Override
+	// protected boolean isRelevantChange(StateChange value) {
+	// return relevantChanges.contains(value);
+	// }
 
 	@Override
 	protected Set<AbstractFactor> generateFactors(State state) {

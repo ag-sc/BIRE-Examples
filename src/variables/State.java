@@ -14,7 +14,6 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
 import changes.StateChange;
@@ -23,7 +22,6 @@ import corpus.Token;
 import factors.FactorGraph;
 import utility.StateID;
 import utility.VariableID;
-import variables.AbstractState;
 
 public class State extends AbstractState implements Serializable {
 
@@ -43,7 +41,7 @@ public class State extends AbstractState implements Serializable {
 	// private Map<EntityID, EntityAnnotation> entities = new HashMap<>();
 	private Map<VariableID, ImmutableEntityAnnotation> immutableEntities = new HashMap<>();
 	private Map<VariableID, MutableEntityAnnotation> mutableEntities = new HashMap<>();
-	// TODO Guava might have a more convenient way to handle this mapping
+	// TODO Maybe not really needed anymore
 	private Map<Integer, Set<VariableID>> tokenToEntities = new HashMap<>();
 
 	/**
@@ -53,7 +51,8 @@ public class State extends AbstractState implements Serializable {
 	 * is more efficient to just clear this map instead of iterating over all
 	 * entities and reset a field in order to mark all entities as unchanged.
 	 */
-	private Multimap<VariableID, StateChange> changedEntities = HashMultimap.create();
+	// private Multimap<VariableID, StateChange> changedEntities =
+	// HashMultimap.create();
 	private final StateID id;
 	private Document document;
 
@@ -82,7 +81,7 @@ public class State extends AbstractState implements Serializable {
 		}
 		this.modelScore = state.modelScore;
 		this.objectiveScore = state.objectiveScore;
-		this.changedEntities = HashMultimap.create(state.changedEntities);
+		// this.changedEntities = HashMultimap.create(state.changedEntities);
 		this.factorGraph = new FactorGraph(state.factorGraph);
 	}
 
@@ -101,23 +100,23 @@ public class State extends AbstractState implements Serializable {
 		return document;
 	}
 
-	@Override
-	public Multimap<VariableID, StateChange> getChangedVariables() {
-		return changedEntities;
-	}
+	// @Override
+	// public Multimap<VariableID, StateChange> getChangedVariables() {
+	// return changedEntities;
+	// }
 
 	public void addImmutableEntity(ImmutableEntityAnnotation entity) {
 		log.debug("State %s: ADD new fixed annotation: %s", this.getID(), entity);
 		immutableEntities.put(entity.getID(), entity);
 		addToTokenToEntityMapping(entity);
-		changedEntities.put(entity.getID(), StateChange.ADD_ANNOTATION);
+		// changedEntities.put(entity.getID(), StateChange.ADD_ANNOTATION);
 	}
 
 	public void addMutableEntity(MutableEntityAnnotation entity) {
 		log.debug("State %s: ADD new annotation: %s", this.getID(), entity);
 		mutableEntities.put(entity.getID(), entity);
 		addToTokenToEntityMapping(entity);
-		changedEntities.put(entity.getID(), StateChange.ADD_ANNOTATION);
+		// changedEntities.put(entity.getID(), StateChange.ADD_ANNOTATION);
 	}
 
 	public void removeMutableEntity(MutableEntityAnnotation entity) {
@@ -126,7 +125,7 @@ public class State extends AbstractState implements Serializable {
 		mutableEntities.put(entity.getID(), entity);
 		removeFromTokenToEntityMapping(entity);
 		removeReferencingArguments(entity);
-		changedEntities.put(entity.getID(), StateChange.REMOVE_ANNOTATION);
+		// changedEntities.put(entity.getID(), StateChange.REMOVE_ANNOTATION);
 	}
 
 	public void removeMutableEntity(VariableID entityID) {
@@ -136,7 +135,7 @@ public class State extends AbstractState implements Serializable {
 			mutableEntities.remove(entityID);
 			removeFromTokenToEntityMapping(entity);
 			removeReferencingArguments(entity);
-			changedEntities.put(entityID, StateChange.REMOVE_ANNOTATION);
+			// changedEntities.put(entityID, StateChange.REMOVE_ANNOTATION);
 		} else {
 			log.warn("Cannot remove entity %s. Entity not found!", entityID);
 		}
@@ -268,12 +267,13 @@ public class State extends AbstractState implements Serializable {
 	}
 
 	public void onEntityChanged(MutableEntityAnnotation entity, StateChange change) {
-		changedEntities.put(entity.getID(), change);
+		// changedEntities.put(entity.getID(), change);
 	}
 
-	public void markAsUnchanged() {
-		changedEntities.clear();
-	}
+	// @Override
+	// public void markAsUnchanged() {
+	// changedEntities.clear();
+	// }
 
 	// <T1-Protein: tumor necrosis <T2-Protein: factor :T1:T2>
 	public String toString() {

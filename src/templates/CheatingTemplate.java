@@ -7,14 +7,11 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import changes.StateChange;
 import corpus.AnnotatedDocument;
 import factors.AbstractFactor;
-import factors.impl.UnorderedEntititesFactor;
+import factors.impl.UnorderedVariablesFactor;
 import learning.ObjectiveFunction;
 import learning.Vector;
-import objective.DefaultObjectiveFunction;
-import templates.AbstractTemplate;
 import variables.State;
 
 public class CheatingTemplate extends AbstractTemplate<State>implements Serializable {
@@ -22,9 +19,10 @@ public class CheatingTemplate extends AbstractTemplate<State>implements Serializ
 	private static Logger log = LogManager.getFormatterLogger(CheatingTemplate.class.getName());
 	private static final String GOLD = "GOLD";
 
-	private ObjectiveFunction<State> objective = new DefaultObjectiveFunction();
+	private ObjectiveFunction<State> objective;
 
-	public CheatingTemplate() {
+	public CheatingTemplate(ObjectiveFunction<State> objective) {
+		this.objective = objective;
 	}
 
 	@Override
@@ -44,14 +42,9 @@ public class CheatingTemplate extends AbstractTemplate<State>implements Serializ
 	}
 
 	@Override
-	protected boolean isRelevantChange(StateChange value) {
-		return true;
-	}
-
-	@Override
 	protected Set<AbstractFactor> generateFactors(State state) {
 		Set<AbstractFactor> factors = new HashSet<>();
-		factors.add(new UnorderedEntititesFactor(this, state.getEntityIDs()));
+		factors.add(new UnorderedVariablesFactor(this, state.getEntityIDs()));
 		return factors;
 	}
 }

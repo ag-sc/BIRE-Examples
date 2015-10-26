@@ -23,6 +23,7 @@ public class DefaultObjectiveFunction extends ObjectiveFunction<State> {
 
 	@Override
 	public double computeScore(State state, State goldState) {
+		// TODO Discuss objective function implementation
 		Collection<AbstractEntityAnnotation> entities = state.getEntities();
 		Collection<AbstractEntityAnnotation> goldEntities = goldState.getEntities();
 		double f1Score;
@@ -35,10 +36,9 @@ public class DefaultObjectiveFunction extends ObjectiveFunction<State> {
 				for (AbstractEntityAnnotation goldEntity : goldEntities) {
 					if (typeMatches(entity, goldEntity)) {
 						double overlapScore = overlapScore(entity, goldEntity);
-						// FIXME comparing overlapScore to previous overlapScore
-						// x argumentScore ??? Seems wrong!
-						if (overlapScore > max) {
-							max = overlapScore * argumentScore(entity, goldEntity);
+						double argumentScore = argumentScore(entity, goldEntity);
+						if (max < overlapScore * argumentScore) {
+							max = overlapScore * argumentScore;
 						}
 					}
 				}
@@ -51,8 +51,9 @@ public class DefaultObjectiveFunction extends ObjectiveFunction<State> {
 				for (AbstractEntityAnnotation entity : entities) {
 					if (typeMatches(goldEntity, entity)) {
 						double overlapScore = overlapScore(goldEntity, entity);
-						if (overlapScore > max) {
-							max = overlapScore * argumentScore(goldEntity, entity);
+						double argumentScore = argumentScore(goldEntity, entity);
+						if (max < overlapScore * argumentScore) {
+							max = overlapScore * argumentScore;
 						}
 					}
 				}
@@ -107,8 +108,8 @@ public class DefaultObjectiveFunction extends ObjectiveFunction<State> {
 		int b = entity.getEndTokenIndex();
 		int x = goldEntity.getBeginTokenIndex();
 		int y = goldEntity.getEndTokenIndex();
-		int overlap = Math.max(0, Math.min(b, y) - Math.max(a, x));
-		double overlapScore = ((double) overlap) / (b - a);
+		double overlap = (double) overlap(entity, goldEntity);
+		double overlapScore = overlap / (b - a);
 		return overlapScore;
 	}
 

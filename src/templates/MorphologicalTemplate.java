@@ -13,7 +13,7 @@ import com.google.common.collect.Sets;
 import changes.StateChange;
 import corpus.Token;
 import factors.AbstractFactor;
-import factors.impl.SingleEntityFactor;
+import factors.impl.SingleVariableFactor;
 import learning.Vector;
 import templates.AbstractTemplate;
 import utility.VariableID;
@@ -31,9 +31,9 @@ public class MorphologicalTemplate extends AbstractTemplate<State>implements Ser
 	public void computeFactor(State state, AbstractFactor abstractFactor) {
 		// TODO features on unannotated tokens (thus, type/name = "null") might
 		// be useful
-		if (abstractFactor instanceof SingleEntityFactor) {
+		if (abstractFactor instanceof SingleVariableFactor) {
 
-			SingleEntityFactor factor = (SingleEntityFactor) abstractFactor;
+			SingleVariableFactor factor = (SingleVariableFactor) abstractFactor;
 			AbstractEntityAnnotation entity = state.getEntity(factor.entityID);
 			log.debug("%s: Add features to entity %s (\"%s\"):", this.getClass().getSimpleName(), entity.getID(),
 					entity.getText());
@@ -91,17 +91,17 @@ public class MorphologicalTemplate extends AbstractTemplate<State>implements Ser
 			log.warn("Provided factor with ID %s not of type SingleEntityFactor.", abstractFactor.getID());
 		}
 	}
-
-	@Override
-	protected boolean isRelevantChange(StateChange value) {
-		return relevantChanges.contains(value);
-	}
+//
+//	@Override
+//	protected boolean isRelevantChange(StateChange value) {
+//		return relevantChanges.contains(value);
+//	}
 
 	@Override
 	protected Set<AbstractFactor> generateFactors(State state) {
 		Set<AbstractFactor> factors = new HashSet<>();
 		for (VariableID entityID : state.getEntityIDs()) {
-			factors.add(new SingleEntityFactor(this, entityID));
+			factors.add(new SingleVariableFactor(this, entityID));
 		}
 		return factors;
 	}

@@ -28,7 +28,7 @@ import sampler.ExhaustiveEntityExplorer;
 import sampler.RelationExplorer;
 import sampling.DefaultSampler;
 import sampling.Explorer;
-import sampling.Sampler;
+import sampling.AbstractSampler;
 import templates.AbstractTemplate;
 import templates.ContextTemplate;
 import templates.MorphologicalTemplate;
@@ -159,7 +159,7 @@ public class EvaluateParameters {
 		TaggedTimer.printTimings();
 	}
 
-	private static void basicParamsGridSearch(File modelDir, File evalDir, List<Sampler<State>> samplers,
+	private static void basicParamsGridSearch(File modelDir, File evalDir, List<AbstractSampler<State>> samplers,
 			List<? extends AnnotatedDocument<State>> allDocuments, AnnotationConfig corpusConfig) {
 		int defaultStep = 10;
 		int defaultEpoch = 5;

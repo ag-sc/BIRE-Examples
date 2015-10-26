@@ -12,6 +12,7 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import corpus.AnnotatedDocument;
 import corpus.BioNLPCorpus;
 import corpus.BioNLPLoader;
 import corpus.SubDocument;
@@ -40,8 +41,8 @@ public class BioNLPLearning {
 		// System.setProperty("log4j.configurationFile", "res/log4j2.xml");
 		// int trainSize = 190;
 
-		int trainSize = 0;
-		int testSize = 0;
+		int trainSize = 2;
+		int testSize = 1;
 		if (args != null && args.length == 2) {
 			trainSize = Integer.parseInt(args[0]);
 			testSize = Integer.parseInt(args[1]);
@@ -139,6 +140,11 @@ public class BioNLPLearning {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
+		}
+		DefaultObjectiveFunction o = new DefaultObjectiveFunction();
+		for (State state : predictions) {
+			State goldState = ((AnnotatedDocument<State>) state.getDocument()).getGoldState();
+			o.score(state, goldState);
 		}
 		log.info("Overall performance:");
 		EvaluationUtil.printPredictionPerformance(predictions);

@@ -3,7 +3,6 @@ package factors;
 import java.util.HashSet;
 import java.util.Set;
 
-import factors.AbstractFactor;
 import templates.AbstractTemplate;
 import utility.VariableID;
 import variables.AbstractState;
@@ -24,7 +23,7 @@ public class EntityAndArgumentFactor extends AbstractFactor {
 	}
 
 	@Override
-	public Set<VariableID> getEntityIDs() {
+	public Set<VariableID> getVariableIDs() {
 		Set<VariableID> entities = new HashSet<>();
 		entities.add(mainEntityID);
 		entities.add(argumentEntityID);

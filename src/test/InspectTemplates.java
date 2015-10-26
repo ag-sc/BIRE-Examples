@@ -45,7 +45,7 @@ public class InspectTemplates {
 
 		State state = doc.getGoldState().duplicate();
 		applyTemplatesToState(templates, state, false);
-		state.markAsUnchanged();
+//		state.markAsUnchanged();
 		Log.d("");
 		Log.d("########### Modify State ###########");
 		Log.d("");

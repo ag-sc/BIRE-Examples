@@ -13,7 +13,7 @@ import com.google.common.collect.Sets;
 import changes.StateChange;
 import corpus.Token;
 import factors.AbstractFactor;
-import factors.impl.SingleEntityFactor;
+import factors.impl.SingleVariableFactor;
 import learning.Vector;
 import templates.AbstractTemplate;
 import utility.VariableID;
@@ -29,9 +29,9 @@ public class ContextTemplate extends AbstractTemplate<State>implements Serializa
 
 	@Override
 	public void computeFactor(State state, AbstractFactor abstractFactor) {
-		if (abstractFactor instanceof SingleEntityFactor) {
+		if (abstractFactor instanceof SingleVariableFactor) {
 
-			SingleEntityFactor factor = (SingleEntityFactor) abstractFactor;
+			SingleVariableFactor factor = (SingleVariableFactor) abstractFactor;
 			AbstractEntityAnnotation entity = state.getEntity(factor.entityID);
 			log.debug("%s: Add features to entity %s (\"%s\"):", this.getClass().getSimpleName(), entity.getID(),
 					entity.getText());
@@ -67,16 +67,16 @@ public class ContextTemplate extends AbstractTemplate<State>implements Serializa
 		}
 	}
 
-	@Override
-	protected boolean isRelevantChange(StateChange value) {
-		return relevantChanges.contains(value);
-	}
+//	@Override
+//	protected boolean isRelevantChange(StateChange value) {
+//		return relevantChanges.contains(value);
+//	}
 
 	@Override
 	protected Set<AbstractFactor> generateFactors(State state) {
 		Set<AbstractFactor> variableSets = new HashSet<>();
 		for (VariableID entityID : state.getEntityIDs()) {
-			variableSets.add(new SingleEntityFactor(this, entityID));
+			variableSets.add(new SingleVariableFactor(this, entityID));
 		}
 		return variableSets;
 	}
