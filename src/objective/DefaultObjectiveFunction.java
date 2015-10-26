@@ -1,5 +1,6 @@
 package objective;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map.Entry;
 
@@ -14,7 +15,7 @@ import variables.AbstractEntityAnnotation;
 import variables.ArgumentRole;
 import variables.State;
 
-public class DefaultObjectiveFunction extends ObjectiveFunction<State> {
+public class DefaultObjectiveFunction extends ObjectiveFunction<State>implements Serializable {
 
 	private static Logger log = LogManager.getFormatterLogger(DefaultObjectiveFunction.class.getName());
 
