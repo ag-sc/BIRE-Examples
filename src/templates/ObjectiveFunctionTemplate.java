@@ -14,14 +14,14 @@ import learning.ObjectiveFunction;
 import learning.Vector;
 import variables.State;
 
-public class CheatingTemplate extends AbstractTemplate<State>implements Serializable {
+public class ObjectiveFunctionTemplate extends AbstractTemplate<State>implements Serializable {
 
-	private static Logger log = LogManager.getFormatterLogger(CheatingTemplate.class.getName());
+	private static Logger log = LogManager.getFormatterLogger(ObjectiveFunctionTemplate.class.getName());
 	private static final String GOLD = "GOLD";
 
-	private ObjectiveFunction<State> objective;
+	private ObjectiveFunction<State, State> objective;
 
-	public CheatingTemplate(ObjectiveFunction<State> objective) {
+	public ObjectiveFunctionTemplate(ObjectiveFunction<State, State> objective) {
 		this.objective = objective;
 	}
 
@@ -29,7 +29,7 @@ public class CheatingTemplate extends AbstractTemplate<State>implements Serializ
 	public void computeFactor(State state, AbstractFactor factor) {
 		Vector featureVector = new Vector();
 		if (state.getDocument() instanceof AnnotatedDocument) {
-			State goldState = ((AnnotatedDocument<State>) state.getDocument()).getGoldState();
+			State goldState = ((AnnotatedDocument<State, State>) state.getDocument()).getGoldResult();
 			double score = objective.score(state, goldState);
 			featureVector.set(GOLD, score);
 

@@ -7,14 +7,14 @@ import corpus.Corpus;
 import corpus.Token;
 import variables.State;
 
-public class SubDocument extends AnnotatedDocument<State> {
+public class SubDocument extends AnnotatedDocument<State, State> {
 	protected String parentDocumentName;
 
 	protected int offset = 0;
 
-	public SubDocument(Corpus<SubDocument> corpus, String parentDocumentName, String subDocumentName, String content,
-			List<Token> tokens, int offset) {
-		super(corpus, subDocumentName, content, tokens);
+	public SubDocument(String parentDocumentName, String subDocumentName, String content, List<Token> tokens,
+			int offset) {
+		super(subDocumentName, content, tokens);
 		this.parentDocumentName = parentDocumentName;
 		this.offset = offset;
 	}
@@ -30,6 +30,6 @@ public class SubDocument extends AnnotatedDocument<State> {
 	@Override
 	public String toString() {
 		return "SubDocument [parentDocumentName=" + parentDocumentName + ", name=" + name + ", offset=" + offset
-				+ ", content=" + content + ", tokens=" + tokens + ", goldState=" + goldState + "]";
+				+ ", content=" + content + ", tokens=" + tokens + ", goldQuery=" + goldQuery + "]";
 	}
 }

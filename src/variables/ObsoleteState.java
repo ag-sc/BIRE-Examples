@@ -10,35 +10,40 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.google.common.collect.Multimap;
 
+import changes.StateChange;
 import corpus.Document;
 import corpus.Token;
 import factors.FactorGraph;
+import utility.StateID;
 import utility.VariableID;
 
-public class State extends AbstractState implements Serializable {
+public class ObsoleteState extends AbstractState implements Serializable {
 
 	private static Logger log = LogManager.getFormatterLogger(State.class.getName());
 
 	private static final String GENERATED_ENTITY_ID_PREFIX = "G";
 	private static final DecimalFormat scoreFormat = new DecimalFormat("0.00000");
+	private static final DecimalFormat stateIDFormat = new DecimalFormat("00000000");
+
+	private static int stateIdIndex = 0;
+	private int entityIdIndex = 0;
 
 	/**
 	 * Since Entities only hold weak pointer via references to one another,
 	 * using a Map is sensible to enable an efficient access to the entities.
 	 */
-	private Map<VariableID, EntityAnnotation> entities = new HashMap<>();
+	// private Map<EntityID, EntityAnnotation> entities = new HashMap<>();
+	private Map<VariableID, ImmutableEntityAnnotation> immutableEntities = new HashMap<>();
+	private Map<VariableID, MutableEntityAnnotation> mutableEntities = new HashMap<>();
 	// TODO Maybe not really needed anymore
 	private Map<Integer, Set<VariableID>> tokenToEntities = new HashMap<>();
 
-	private AtomicInteger entityIDIndex = new AtomicInteger();
 	/**
 	 * The state needs to keep track of the changes that were made to its
 	 * entities in order to allow for efficient computation of factors and their
@@ -46,9 +51,11 @@ public class State extends AbstractState implements Serializable {
 	 * is more efficient to just clear this map instead of iterating over all
 	 * entities and reset a field in order to mark all entities as unchanged.
 	 */
-	private Document<State> document;
+	// private Multimap<VariableID, StateChange> changedEntities =
+	// HashMultimap.create();
+	private Document document;
 
-	private State() {
+	private ObsoleteState() {
 		super();
 	}
 
@@ -58,57 +65,73 @@ public class State extends AbstractState implements Serializable {
 	 * 
 	 * @param state
 	 */
-	public State(State state) {
+	public ObsoleteState(State state) {
 		this();
-		this.entityIDIndex = new AtomicInteger(state.entityIDIndex.get());
+		this.entityIdIndex = state.entityIdIndex;
 		this.document = state.document;
-		this.factorGraph = new FactorGraph(state.factorGraph);
-		for (EntityAnnotation e : state.entities.values()) {
-			this.entities.put(e.getID(), new EntityAnnotation(this, e));
+		for (ImmutableEntityAnnotation e : state.immutableEntities.values()) {
+			this.immutableEntities.put(e.getID(), new ImmutableEntityAnnotation(this, e));
+		}
+		for (MutableEntityAnnotation e : state.mutableEntities.values()) {
+			this.mutableEntities.put(e.getID(), new MutableEntityAnnotation(this, e));
 		}
 		for (Entry<Integer, Set<VariableID>> e : state.tokenToEntities.entrySet()) {
 			this.tokenToEntities.put(e.getKey(), new HashSet<VariableID>(e.getValue()));
 		}
 		this.modelScore = state.modelScore;
 		this.objectiveScore = state.objectiveScore;
+		// this.changedEntities = HashMultimap.create(state.changedEntities);
+		this.factorGraph = new FactorGraph(state.factorGraph);
 	}
 
-	public State(Document<State> document) {
+	public ObsoleteState(Document document) {
 		this();
 		this.document = document;
 	}
 
-	// @Override
-	// public State duplicate() {
-	// State cloned = new State(this);
-	// return cloned;
-	// }
+	@Override
+	public State duplicate() {
+		State cloned = new State(this);
+		return cloned;
+	}
 
-	public Document<State> getDocument() {
+	public Document getDocument() {
 		return document;
 	}
 
-	public void addEntity(EntityAnnotation entity) {
-		log.debug("State %s: ADD new annotation: %s", this.getID(), entity);
-		entities.put(entity.getID(), entity);
+	// @Override
+	// public Multimap<VariableID, StateChange> getChangedVariables() {
+	// return changedEntities;
+	// }
+
+	public void addImmutableEntity(ImmutableEntityAnnotation entity) {
+		log.debug("State %s: ADD new fixed annotation: %s", this.getID(), entity);
+		immutableEntities.put(entity.getID(), entity);
 		addToTokenToEntityMapping(entity);
 		// changedEntities.put(entity.getID(), StateChange.ADD_ANNOTATION);
 	}
 
-	public void removeEntity(EntityAnnotation entity) {
+	public void addMutableEntity(MutableEntityAnnotation entity) {
+		log.debug("State %s: ADD new annotation: %s", this.getID(), entity);
+		mutableEntities.put(entity.getID(), entity);
+		addToTokenToEntityMapping(entity);
+		// changedEntities.put(entity.getID(), StateChange.ADD_ANNOTATION);
+	}
+
+	public void removeMutableEntity(MutableEntityAnnotation entity) {
 		log.debug("State %s: REMOVE annotation: %s", this.getID(), entity);
-		entities.remove(entity.getID());
-		entities.put(entity.getID(), entity);
+		mutableEntities.remove(entity.getID());
+		mutableEntities.put(entity.getID(), entity);
 		removeFromTokenToEntityMapping(entity);
 		removeReferencingArguments(entity);
 		// changedEntities.put(entity.getID(), StateChange.REMOVE_ANNOTATION);
 	}
 
-	public void removeEntity(VariableID entityID) {
-		EntityAnnotation entity = getEntity(entityID);
+	public void removeMutableEntity(VariableID entityID) {
+		MutableEntityAnnotation entity = getMutableEntity(entityID);
 		if (entity != null) {
 			log.debug("State %s: REMOVE annotation: %s", this.getID(), entity);
-			entities.remove(entityID);
+			mutableEntities.remove(entityID);
 			removeFromTokenToEntityMapping(entity);
 			removeReferencingArguments(entity);
 			// changedEntities.put(entityID, StateChange.REMOVE_ANNOTATION);
@@ -118,15 +141,48 @@ public class State extends AbstractState implements Serializable {
 	}
 
 	public Set<VariableID> getEntityIDs() {
-		return entities.keySet();
+		Set<VariableID> entityIDs = new HashSet<>();
+		entityIDs.addAll(getImmutableEntityIDs());
+		entityIDs.addAll(getMutableEntityIDs());
+		return entityIDs;
 	}
 
-	public Collection<EntityAnnotation> getEntities() {
-		return entities.values();
+	public Set<VariableID> getMutableEntityIDs() {
+		return mutableEntities.keySet();
 	}
 
-	public EntityAnnotation getEntity(VariableID id) {
-		return entities.get(id);
+	public Set<VariableID> getImmutableEntityIDs() {
+		return immutableEntities.keySet();
+	}
+
+	public Collection<AbstractEntityAnnotation> getEntities() {
+		Collection<AbstractEntityAnnotation> entites = new ArrayList<>();
+		entites.addAll(getMutableEntities());
+		entites.addAll(getImmutableEntities());
+		return entites;
+	}
+
+	public Collection<MutableEntityAnnotation> getMutableEntities() {
+		return mutableEntities.values();
+	}
+
+	public Collection<ImmutableEntityAnnotation> getImmutableEntities() {
+		return immutableEntities.values();
+	}
+
+	public AbstractEntityAnnotation getEntity(VariableID id) {
+		if (mutableEntities.containsKey(id))
+			return mutableEntities.get(id);
+		else
+			return immutableEntities.get(id);
+	}
+
+	public MutableEntityAnnotation getMutableEntity(VariableID id) {
+		return mutableEntities.get(id);
+	}
+
+	public ImmutableEntityAnnotation getImmutableEntity(VariableID id) {
+		return immutableEntities.get(id);
 	}
 
 	public boolean tokenHasAnnotation(Token token) {
@@ -147,7 +203,7 @@ public class State extends AbstractState implements Serializable {
 		return entitiesForToken;
 	}
 
-	protected void removeFromTokenToEntityMapping(EntityAnnotation entityAnnotation) {
+	protected void removeFromTokenToEntityMapping(AbstractEntityAnnotation entityAnnotation) {
 		for (int i = entityAnnotation.getBeginTokenIndex(); i < entityAnnotation.getEndTokenIndex(); i++) {
 			Set<VariableID> entitiesForToken = tokenToEntities.get(i);
 			if (entitiesForToken != null) {
@@ -156,7 +212,7 @@ public class State extends AbstractState implements Serializable {
 		}
 	}
 
-	protected void addToTokenToEntityMapping(EntityAnnotation entityAnnotation) {
+	protected void addToTokenToEntityMapping(AbstractEntityAnnotation entityAnnotation) {
 		for (int i = entityAnnotation.getBeginTokenIndex(); i < entityAnnotation.getEndTokenIndex(); i++) {
 			Set<VariableID> entitiesForToken = tokenToEntities.get(i);
 			if (entitiesForToken == null) {
@@ -173,9 +229,9 @@ public class State extends AbstractState implements Serializable {
 	 * 
 	 * @param removedEntity
 	 */
-	private void removeReferencingArguments(EntityAnnotation removedEntity) {
-		for (EntityAnnotation e : entities.values()) {
-			Multimap<ArgumentRole, VariableID> arguments = e.getReadOnlyArguments();
+	private void removeReferencingArguments(MutableEntityAnnotation removedEntity) {
+		for (MutableEntityAnnotation e : mutableEntities.values()) {
+			Multimap<ArgumentRole, VariableID> arguments = e.getArguments();
 			for (Entry<ArgumentRole, VariableID> entry : arguments.entries()) {
 				if (entry.getValue().equals(removedEntity.getID())) {
 					e.removeArgument(entry.getKey(), entry.getValue());
@@ -189,8 +245,8 @@ public class State extends AbstractState implements Serializable {
 	}
 
 	protected VariableID generateEntityID() {
-		int currentID = entityIDIndex.getAndIncrement();
-		String id = GENERATED_ENTITY_ID_PREFIX + currentID;
+		String id = GENERATED_ENTITY_ID_PREFIX + entityIdIndex;
+		entityIdIndex++;
 		return new VariableID(id);
 	}
 
@@ -198,6 +254,16 @@ public class State extends AbstractState implements Serializable {
 		return tokenToEntities;
 	}
 
+	public void onEntityChanged(MutableEntityAnnotation entity, StateChange change) {
+		// changedEntities.put(entity.getID(), change);
+	}
+
+	// @Override
+	// public void markAsUnchanged() {
+	// changedEntities.clear();
+	// }
+
+	// <T1-Protein: tumor necrosis <T2-Protein: factor :T1:T2>
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("ID:");
@@ -210,10 +276,10 @@ public class State extends AbstractState implements Serializable {
 		builder.append("]: ");
 		for (Token t : document.getTokens()) {
 			Set<VariableID> entities = getAnnotationsForToken(t);
-			List<EntityAnnotation> begin = new ArrayList<>();
-			List<EntityAnnotation> end = new ArrayList<>();
+			List<AbstractEntityAnnotation> begin = new ArrayList<>();
+			List<AbstractEntityAnnotation> end = new ArrayList<>();
 			for (VariableID entityID : entities) {
-				EntityAnnotation e = getEntity(entityID);
+				AbstractEntityAnnotation e = getEntity(entityID);
 				if (e.getBeginTokenIndex() == t.getIndex())
 					begin.add(e);
 				if (e.getEndTokenIndex() == t.getIndex() + 1)
@@ -229,21 +295,21 @@ public class State extends AbstractState implements Serializable {
 		return builder.toString();
 	}
 
-	private void buildTokenPrefix(StringBuilder builder, List<EntityAnnotation> begin) {
+	private void buildTokenPrefix(StringBuilder builder, List<AbstractEntityAnnotation> begin) {
 		builder.append("[");
-		for (EntityAnnotation e : begin) {
+		for (AbstractEntityAnnotation e : begin) {
 			builder.append(e.getID());
 			builder.append("-");
 			builder.append(e.getType().getName());
 			builder.append("(");
-			builder.append(e.getReadOnlyArguments());
+			builder.append(e.getArguments());
 			builder.append("):");
 		}
 		builder.append(" ");
 	}
 
-	private void buildTokenSuffix(StringBuilder builder, List<EntityAnnotation> end) {
-		for (EntityAnnotation e : end) {
+	private void buildTokenSuffix(StringBuilder builder, List<AbstractEntityAnnotation> end) {
+		for (AbstractEntityAnnotation e : end) {
 			builder.append(":");
 			builder.append(e.getID());
 		}
@@ -253,7 +319,7 @@ public class State extends AbstractState implements Serializable {
 
 	public String toDetailedString() {
 		StringBuilder builder = new StringBuilder();
-		for (EntityAnnotation e : getEntities()) {
+		for (AbstractEntityAnnotation e : getEntities()) {
 			builder.append(e);
 			builder.append("\n");
 		}
@@ -262,14 +328,6 @@ public class State extends AbstractState implements Serializable {
 			builder.append("\n");
 		}
 		return builder.toString().trim();
-	}
-
-	public Collection<EntityAnnotation> getNonFixedEntities() {
-		return entities.values().stream().filter(e -> !e.isFixed).collect(Collectors.toList());
-	}
-
-	public Set<VariableID> getNonFixedEntityIDs() {
-		return entities.values().stream().filter(e -> !e.isFixed).map(e -> e.getID()).collect(Collectors.toSet());
 	}
 
 }

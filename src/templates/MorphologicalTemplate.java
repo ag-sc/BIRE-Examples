@@ -15,9 +15,8 @@ import corpus.Token;
 import factors.AbstractFactor;
 import factors.impl.SingleVariableFactor;
 import learning.Vector;
-import templates.AbstractTemplate;
 import utility.VariableID;
-import variables.AbstractEntityAnnotation;
+import variables.EntityAnnotation;
 import variables.State;
 
 public class MorphologicalTemplate extends AbstractTemplate<State>implements Serializable {
@@ -34,7 +33,7 @@ public class MorphologicalTemplate extends AbstractTemplate<State>implements Ser
 		if (abstractFactor instanceof SingleVariableFactor) {
 
 			SingleVariableFactor factor = (SingleVariableFactor) abstractFactor;
-			AbstractEntityAnnotation entity = state.getEntity(factor.entityID);
+			EntityAnnotation entity = state.getEntity(factor.entityID);
 			log.debug("%s: Add features to entity %s (\"%s\"):", this.getClass().getSimpleName(), entity.getID(),
 					entity.getText());
 			log.debug("%s: Add features to entity %s (\"%s\"):", this.getClass().getSimpleName(), entity.getID(),
@@ -91,11 +90,11 @@ public class MorphologicalTemplate extends AbstractTemplate<State>implements Ser
 			log.warn("Provided factor with ID %s not of type SingleEntityFactor.", abstractFactor.getID());
 		}
 	}
-//
-//	@Override
-//	protected boolean isRelevantChange(StateChange value) {
-//		return relevantChanges.contains(value);
-//	}
+	//
+	// @Override
+	// protected boolean isRelevantChange(StateChange value) {
+	// return relevantChanges.contains(value);
+	// }
 
 	@Override
 	protected Set<AbstractFactor> generateFactors(State state) {

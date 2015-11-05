@@ -20,17 +20,17 @@ public class UsageLoader {
 		convertDatasetToJavaBinaries(DatasetConfig.getUSAGEJavaBinFilepath());
 	}
 
-	public static DefaultCorpus<AnnotatedDocument<State>> loadDatasetFromBinaries(String srcFilepath)
+	public static DefaultCorpus<AnnotatedDocument<State, State>> loadDatasetFromBinaries(String srcFilepath)
 			throws FileNotFoundException, IOException, ClassNotFoundException {
 		ObjectInputStream in = new ObjectInputStream(new FileInputStream(srcFilepath));
-		DefaultCorpus<AnnotatedDocument<State>> corpus = (DefaultCorpus) in.readObject();
+		DefaultCorpus<AnnotatedDocument<State, State>> corpus = (DefaultCorpus) in.readObject();
 		in.close();
 		return corpus;
 	}
 
-	public static DefaultCorpus<AnnotatedDocument<State>> convertDatasetToJavaBinaries(String destFilepath) {
+	public static DefaultCorpus<AnnotatedDocument<State, State>> convertDatasetToJavaBinaries(String destFilepath) {
 		File annDir = new File("/homes/sjebbara/datasets/USAGE-corpus-with-text/files/de");
-		DefaultCorpus<AnnotatedDocument<State>> corpus = UsageParser.parseCorpus(annDir);
+		DefaultCorpus<AnnotatedDocument<State, State>> corpus = UsageParser.parseCorpus(annDir);
 		try {
 			System.out.println("store");
 			saveCorpusToFile(corpus, destFilepath);
@@ -46,7 +46,7 @@ public class UsageLoader {
 		return null;
 	}
 
-	private static void saveCorpusToFile(DefaultCorpus<AnnotatedDocument<State>> corpus, String destFilepath)
+	private static void saveCorpusToFile(DefaultCorpus<AnnotatedDocument<State, State>> corpus, String destFilepath)
 			throws FileNotFoundException, IOException {
 		File destFile = new File(destFilepath);
 		File destDir = destFile.getParentFile();

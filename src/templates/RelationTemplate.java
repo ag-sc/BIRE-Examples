@@ -16,10 +16,9 @@ import factors.AbstractFactor;
 import factors.EntityAndArgumentFactor;
 import learning.Vector;
 import logging.Log;
-import templates.AbstractTemplate;
 import utility.VariableID;
-import variables.AbstractEntityAnnotation;
 import variables.ArgumentRole;
+import variables.EntityAnnotation;
 import variables.EntityType;
 import variables.State;
 
@@ -35,8 +34,8 @@ public class RelationTemplate extends AbstractTemplate<State>implements Serializ
 		// be useful
 		if (abstractFactor instanceof EntityAndArgumentFactor) {
 			EntityAndArgumentFactor factor = (EntityAndArgumentFactor) abstractFactor;
-			AbstractEntityAnnotation mainEntity = state.getEntity(factor.getMainEntityID());
-			AbstractEntityAnnotation argEntity = state.getEntity(factor.getArgumentEntityID());
+			EntityAnnotation mainEntity = state.getEntity(factor.getMainEntityID());
+			EntityAnnotation argEntity = state.getEntity(factor.getArgumentEntityID());
 			ArgumentRole argRole = factor.getArgumentRole();
 
 			EntityType argType = argEntity.getType();
@@ -85,15 +84,15 @@ public class RelationTemplate extends AbstractTemplate<State>implements Serializ
 
 	}
 
-	private double isBefore(AbstractEntityAnnotation e1, AbstractEntityAnnotation e2) {
+	private double isBefore(EntityAnnotation e1, EntityAnnotation e2) {
 		return e1.getEndTokenIndex() <= e2.getBeginTokenIndex() ? 1.0 : 0;
 	}
 
-	private double isAfter(AbstractEntityAnnotation e1, AbstractEntityAnnotation e2) {
+	private double isAfter(EntityAnnotation e1, EntityAnnotation e2) {
 		return e2.getEndTokenIndex() <= e1.getBeginTokenIndex() ? 1.0 : 0;
 	}
 
-	private int distance(AbstractEntityAnnotation e1, AbstractEntityAnnotation e2) {
+	private int distance(EntityAnnotation e1, EntityAnnotation e2) {
 		// TODO test implementation of entity distance
 		return Math.max(e2.getBeginTokenIndex() - e1.getEndTokenIndex() + 1,
 				e1.getBeginTokenIndex() - e2.getEndTokenIndex() + 1);
@@ -107,8 +106,8 @@ public class RelationTemplate extends AbstractTemplate<State>implements Serializ
 	@Override
 	protected Set<AbstractFactor> generateFactors(State state) {
 		Set<AbstractFactor> factors = new HashSet<>();
-		for (AbstractEntityAnnotation entity : state.getEntities()) {
-			Multimap<ArgumentRole, VariableID> arguments = entity.getArguments();
+		for (EntityAnnotation entity : state.getEntities()) {
+			Multimap<ArgumentRole, VariableID> arguments = entity.getReadOnlyArguments();
 			for (Entry<ArgumentRole, VariableID> a : arguments.entries()) {
 				factors.add(new EntityAndArgumentFactor(this, entity.getID(), a.getKey(), a.getValue()));
 			}

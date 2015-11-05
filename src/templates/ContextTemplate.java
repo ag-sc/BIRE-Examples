@@ -15,9 +15,8 @@ import corpus.Token;
 import factors.AbstractFactor;
 import factors.impl.SingleVariableFactor;
 import learning.Vector;
-import templates.AbstractTemplate;
 import utility.VariableID;
-import variables.AbstractEntityAnnotation;
+import variables.EntityAnnotation;
 import variables.State;
 
 public class ContextTemplate extends AbstractTemplate<State>implements Serializable {
@@ -32,7 +31,7 @@ public class ContextTemplate extends AbstractTemplate<State>implements Serializa
 		if (abstractFactor instanceof SingleVariableFactor) {
 
 			SingleVariableFactor factor = (SingleVariableFactor) abstractFactor;
-			AbstractEntityAnnotation entity = state.getEntity(factor.entityID);
+			EntityAnnotation entity = state.getEntity(factor.entityID);
 			log.debug("%s: Add features to entity %s (\"%s\"):", this.getClass().getSimpleName(), entity.getID(),
 					entity.getText());
 

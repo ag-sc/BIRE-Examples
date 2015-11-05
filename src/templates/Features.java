@@ -3,7 +3,7 @@ package templates;
 import java.util.List;
 
 import corpus.Token;
-import variables.AbstractEntityAnnotation;
+import variables.EntityAnnotation;
 import variables.State;
 
 public class Features {
@@ -89,16 +89,14 @@ public class Features {
 		return text.matches(String.format(".*%s.*", regex));
 	}
 
-	public static Token getTokenRelativeToEntity(State state,
-			AbstractEntityAnnotation e, int at) {
+	public static Token getTokenRelativeToEntity(State state, EntityAnnotation e, int at) {
 		int absolutPosition = -1;
 		if (at < 0)
 			absolutPosition = e.getBeginTokenIndex() + at;
 		else if (at > 0)
 			absolutPosition = e.getEndTokenIndex() + at - 1;
-		
-		if (absolutPosition < 0
-				|| absolutPosition > state.getDocument().getTokens().size() - 1)
+
+		if (absolutPosition < 0 || absolutPosition > state.getDocument().getTokens().size() - 1)
 			return null;
 		return state.getDocument().getTokens().get(absolutPosition);
 	}

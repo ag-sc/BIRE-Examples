@@ -20,7 +20,6 @@ import com.google.common.collect.Multimap;
 
 import corpus.AnnotatedDocument;
 import corpus.AnnotationConfig;
-import corpus.Corpus;
 import corpus.DefaultCorpus;
 import corpus.Token;
 import corpus.parser.ParsingUtils;
@@ -28,8 +27,8 @@ import logging.Log;
 import utility.VariableID;
 import variables.Argument;
 import variables.ArgumentRole;
+import variables.EntityAnnotation;
 import variables.EntityType;
-import variables.MutableEntityAnnotation;
 import variables.State;
 
 public class UsageParser {
@@ -58,11 +57,11 @@ public class UsageParser {
 	public static void main(String[] args) {
 		File annDir = new File("res/usage/de");
 
-		DefaultCorpus<AnnotatedDocument<State>> corpus = parseCorpus(annDir);
+		DefaultCorpus<AnnotatedDocument<State, State>> corpus = parseCorpus(annDir);
 		Log.d("Corpus: %s", corpus.toDetailedString());
 	}
 
-	public static DefaultCorpus<AnnotatedDocument<State>> parseCorpus(File annDir) {
+	public static DefaultCorpus<AnnotatedDocument<State, State>> parseCorpus(File annDir) {
 		File[] allFiles = annDir.listFiles();
 
 		Map<String, File> textFiles = new HashMap<String, File>();
@@ -107,7 +106,7 @@ public class UsageParser {
 		}
 
 		AnnotationConfig config = getUsageConfig();
-		DefaultCorpus<AnnotatedDocument<State>> corpus = new DefaultCorpus<>(config);
+		DefaultCorpus<AnnotatedDocument<State, State>> corpus = new DefaultCorpus<>(config);
 
 		for (String category : textFiles.keySet()) {
 			corpus.addDocuments(parseFile(corpus, category, textFiles.get(category), annotationFilesA1.get(category),
@@ -118,10 +117,10 @@ public class UsageParser {
 		return corpus;
 	}
 
-	private static Collection<AnnotatedDocument<State>> parseFile(DefaultCorpus<AnnotatedDocument<State>> corpus,
-			String category, File t, File a1, File r1) {
+	private static Collection<AnnotatedDocument<State, State>> parseFile(
+			DefaultCorpus<AnnotatedDocument<State, State>> corpus, String category, File t, File a1, File r1) {
 		Log.d("Process category %s", category);
-		Map<String, AnnotatedDocument<State>> documents = parseDocument(corpus, category, t);
+		Map<String, AnnotatedDocument<State, State>> documents = parseDocument(corpus, category, t);
 
 		addEntities(corpus, a1, documents);
 		addRelations(corpus, r1, documents);
@@ -129,9 +128,9 @@ public class UsageParser {
 		return documents.values();
 	}
 
-	private static Map<String, AnnotatedDocument<State>> parseDocument(DefaultCorpus<AnnotatedDocument<State>> corpus,
-			String category, File t) {
-		Map<String, AnnotatedDocument<State>> documents = new HashMap<>();
+	private static Map<String, AnnotatedDocument<State, State>> parseDocument(
+			DefaultCorpus<AnnotatedDocument<State, State>> corpus, String category, File t) {
+		Map<String, AnnotatedDocument<State, State>> documents = new HashMap<>();
 		try {
 			FileInputStream fileStream = new FileInputStream(t);
 			InputStreamReader streamReader = new InputStreamReader(fileStream, "UTF-8");
@@ -149,9 +148,10 @@ public class UsageParser {
 
 				List<Token> tokens = tokenize(content);
 
-				AnnotatedDocument<State> doc = new AnnotatedDocument<>(corpus,
+				AnnotatedDocument<State, State> doc = new AnnotatedDocument<>(
 						String.format("%s-%s-%s-%s", category, documentID, productID, reviewID), content, tokens);
-				doc.setGoldState(new State(doc));
+				doc.setPriorKnowledge(new State(doc));
+				doc.setGoldResult(new State(doc));
 				documents.put(documentID, doc);
 			}
 			textReader.close();
@@ -163,8 +163,8 @@ public class UsageParser {
 		return documents;
 	}
 
-	private static void addEntities(DefaultCorpus<AnnotatedDocument<State>> corpus, File annotationFile,
-			Map<String, AnnotatedDocument<State>> documents) {
+	private static void addEntities(DefaultCorpus<AnnotatedDocument<State, State>> corpus, File annotationFile,
+			Map<String, AnnotatedDocument<State, State>> documents) {
 
 		try {
 			FileInputStream fileStream = new FileInputStream(annotationFile);
@@ -182,8 +182,8 @@ public class UsageParser {
 				String entityID = columns[5];
 				String subjectivity = columns[6];
 				String relatedness = columns[7];
-				AnnotatedDocument<State> doc = documents.get(documentID);
-				State goldState = doc.getGoldState();
+				AnnotatedDocument<State, State> doc = documents.get(documentID);
+				State goldState = doc.getGoldResult();
 
 				if (SUBJECTIVE_TYPE_NAME.equals(entityTypeName)) {
 					/**
@@ -213,9 +213,9 @@ public class UsageParser {
 					Log.d("Tokens: %s", doc.getTokens());
 				}
 
-				MutableEntityAnnotation e = new MutableEntityAnnotation(goldState, entityID, entityType,
-						beginTokenIndex, endTokenIndex);
-				goldState.addMutableEntity(e);
+				EntityAnnotation e = new EntityAnnotation(goldState, entityID, entityType, beginTokenIndex,
+						endTokenIndex);
+				goldState.addEntity(e);
 				lineNumber++;
 			}
 			annotationReader.close();
@@ -226,8 +226,8 @@ public class UsageParser {
 		}
 	}
 
-	private static void addRelations(DefaultCorpus<AnnotatedDocument<State>> corpus, File relationFile,
-			Map<String, AnnotatedDocument<State>> documents) {
+	private static void addRelations(DefaultCorpus<AnnotatedDocument<State, State>> corpus, File relationFile,
+			Map<String, AnnotatedDocument<State, State>> documents) {
 
 		try {
 			FileInputStream fileStream = new FileInputStream(relationFile);
@@ -242,8 +242,8 @@ public class UsageParser {
 				String argument1ID = columns[2];
 				String argument2ID = columns[3];
 
-				AnnotatedDocument<State> doc = documents.get(documentID);
-				State goldState = doc.getGoldState();
+				AnnotatedDocument<State, State> doc = documents.get(documentID);
+				State goldState = doc.getGoldResult();
 				EntityType entityType = corpus.getCorpusConfig().getEntityType(entityTypeName);
 				if (entityType == null) {
 					Log.w("EnitityType \"%s\" for annotation in file %s and line %s not found in given config.",
@@ -271,16 +271,16 @@ public class UsageParser {
 							lineNumber);
 				}
 
-				MutableEntityAnnotation trigger = goldState.getMutableEntity(new VariableID(triggerID));
+				EntityAnnotation trigger = goldState.getEntity(new VariableID(triggerID));
 
 				if (trigger == null) {
 					Log.w("No (trigger) entity found for id \"%s\" in file %s and line %s.", triggerID, relationFile,
 							lineNumber);
 				}
 
-				MutableEntityAnnotation e = new MutableEntityAnnotation(goldState, entityType, arguments,
+				EntityAnnotation e = new EntityAnnotation(goldState, entityType, arguments,
 						trigger.getBeginTokenIndex(), trigger.getEndTokenIndex());
-				goldState.addMutableEntity(e);
+				goldState.addEntity(e);
 				lineNumber++;
 			}
 			relationReader.close();

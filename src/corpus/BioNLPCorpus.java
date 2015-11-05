@@ -67,7 +67,7 @@ public class BioNLPCorpus implements Corpus<SubDocument> {
 			builder.append("\n\t");
 			builder.append(doc.getTokens());
 			builder.append("\n\t");
-			builder.append(doc.getGoldState());
+			builder.append(doc.getGoldResult());
 			builder.append("\n");
 		}
 		return "BratCorpus [corpusConfig=" + corpusConfig + ", #documents=" + documents.size() + ", documents=\n"

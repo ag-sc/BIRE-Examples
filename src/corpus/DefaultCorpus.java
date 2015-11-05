@@ -7,7 +7,7 @@ import java.util.List;
 import corpus.AnnotatedDocument;
 import corpus.Corpus;
 
-public class DefaultCorpus<DocumentT extends AnnotatedDocument<?>> implements Corpus<DocumentT> {
+public class DefaultCorpus<DocumentT extends AnnotatedDocument<?, ?>> implements Corpus<DocumentT> {
 
 	private List<DocumentT> documents = new ArrayList<>();
 	private AnnotationConfig corpusConfig;
@@ -42,14 +42,14 @@ public class DefaultCorpus<DocumentT extends AnnotatedDocument<?>> implements Co
 
 	public String toDetailedString() {
 		StringBuilder builder = new StringBuilder();
-		for (AnnotatedDocument<?> doc : documents) {
+		for (AnnotatedDocument<?, ?> doc : documents) {
 			builder.append(doc.getName());
 			builder.append("\n\t");
 			builder.append(doc.getContent());
 			builder.append("\n\t");
 			builder.append(doc.getTokens());
 			builder.append("\n\t");
-			builder.append(doc.getGoldState());
+			builder.append(doc.getGoldResult());
 			builder.append("\n");
 		}
 		return "BratCorpus [corpusConfig=" + corpusConfig + ", #documents=" + documents.size() + ", documents=\n"

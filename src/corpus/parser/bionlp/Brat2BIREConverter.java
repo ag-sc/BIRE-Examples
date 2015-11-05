@@ -20,9 +20,7 @@ import corpus.BioNLPCorpus;
 import corpus.SubDocument;
 import corpus.parser.ParsingUtils;
 import corpus.parser.bionlp.annotations.BratAnnotation;
-import corpus.parser.bionlp.annotations.BratAttributeAnnotation;
 import corpus.parser.bionlp.annotations.BratEventAnnotation;
-import corpus.parser.bionlp.annotations.BratRelationAnnotation;
 import corpus.parser.bionlp.annotations.BratTextBoundAnnotation;
 import corpus.parser.bionlp.exceptions.AnnotationFileException;
 import corpus.parser.bionlp.exceptions.AnnotationReferenceMissingException;
@@ -31,11 +29,9 @@ import corpus.parser.bionlp.exceptions.AnnotationTypeMissingException;
 import corpus.parser.bionlp.julie.Tokenization;
 import utility.ID;
 import utility.VariableID;
-import variables.AbstractEntityAnnotation;
 import variables.ArgumentRole;
+import variables.EntityAnnotation;
 import variables.EntityType;
-import variables.ImmutableEntityAnnotation;
-import variables.MutableEntityAnnotation;
 import variables.State;
 
 public class Brat2BIREConverter {
@@ -90,14 +86,14 @@ public class Brat2BIREConverter {
 		for (Tokenization tokenization : tokenizations) {
 			log.debug("############");
 			log.debug("Tokens: %s", tokenization.tokens);
-			SubDocument doc = new SubDocument(corpus, bratDoc.getDocumentName(),
+			SubDocument doc = new SubDocument(bratDoc.getDocumentName(),
 					bratDoc.getDocumentName() + "-" + sentenceNumber, tokenization.originalSentence,
 					tokenization.tokens, tokenization.absoluteStartOffset);
 
-			State state = new State(doc);
+			State priorKnowledge = new State(doc);
 			/*
 			 * These annotations are provided for the event extraction task as
-			 * initial knowledge. The state sees them as immutable.
+			 * initial knowledge. The state sees them as fixed.
 			 */
 			log.debug("Parse A1 annotations...");
 			if (textAnnotationsA1.isEmpty()) {
@@ -106,15 +102,18 @@ public class Brat2BIREConverter {
 			for (BratTextBoundAnnotation tann : textAnnotationsA1) {
 				if (isInSentence(tann, tokenization)) {
 					try {
-						ImmutableEntityAnnotation entity = convertTextBoundAnnotation(state, corpus.getCorpusConfig(),
+						EntityAnnotation entity = convertTextBoundAnnotation(priorKnowledge, corpus.getCorpusConfig(),
 								tokenization, tann);
-						state.addImmutableEntity(entity);
+						entity.setFixed(true);
+						priorKnowledge.addEntity(entity);
 					} catch (Exception e) {
 						log.warn(e);
 						// e.printStackTrace();
 					}
 				}
 			}
+
+			State goldState = new State(priorKnowledge);
 			/*
 			 * The following annotations resemble the gold standard for this
 			 * document which are the target of the event extraction task.
@@ -123,9 +122,9 @@ public class Brat2BIREConverter {
 			for (BratTextBoundAnnotation tann : textAnnotationsA2) {
 				if (isInSentence(tann, tokenization)) {
 					try {
-						MutableEntityAnnotation entity = convertTextBoundAnnotation(state, corpus.getCorpusConfig(),
+						EntityAnnotation entity = convertTextBoundAnnotation(goldState, corpus.getCorpusConfig(),
 								tokenization, tann);
-						state.addMutableEntity(entity);
+						goldState.addEntity(entity);
 					} catch (Exception e) {
 						log.warn(e);
 					}
@@ -135,18 +134,18 @@ public class Brat2BIREConverter {
 			for (BratEventAnnotation eann : eventAnnotationsA2) {
 				if (isInSentence(eann.getTrigger(), tokenization)) {
 					try {
-						MutableEntityAnnotation entity = convertEventAnnotation(state, corpus.getCorpusConfig(),
+						EntityAnnotation entity = convertEventAnnotation(goldState, corpus.getCorpusConfig(),
 								tokenization, eann);
-						state.addMutableEntity(entity);
+						goldState.addEntity(entity);
 					} catch (Exception e) {
 						log.warn(e);
 					}
 				}
 			}
 			try {
-				checkConsistency(state);
-				doc.setGoldState(state);
-				doc.setInitialState(new State(doc));
+				checkConsistency(goldState);
+				doc.setPriorKnowledge(priorKnowledge);
+				doc.setGoldResult(goldState);
 				documents.add(doc);
 			} catch (Exception e) {
 				log.warn(e);
@@ -181,9 +180,9 @@ public class Brat2BIREConverter {
 	private static void checkConsistency(State state)
 			throws AnnotationReferenceMissingException, AnnotationTextMismatchException {
 		Set<VariableID> existingEntities = state.getEntityIDs();
-		for (AbstractEntityAnnotation e : state.getEntities()) {
+		for (EntityAnnotation e : state.getEntities()) {
 			// check if all arguments are present
-			for (VariableID id : e.getArguments().values()) {
+			for (VariableID id : e.getReadOnlyArguments().values()) {
 				if (!existingEntities.contains(id)) {
 					log.warn("Entity %s references missing entity %s", e.getID(), id);
 					throw new AnnotationReferenceMissingException(
@@ -217,7 +216,7 @@ public class Brat2BIREConverter {
 		return tokenization.absoluteStartOffset <= ann.getStart() && ann.getEnd() <= tokenization.absoluteEndOffset;
 	}
 
-	private static MutableEntityAnnotation convertTextBoundAnnotation(State state, AnnotationConfig config,
+	private static EntityAnnotation convertTextBoundAnnotation(State state, AnnotationConfig config,
 			Tokenization tokenization, BratTextBoundAnnotation t)
 					throws AnnotationTypeMissingException, AnnotationTextMismatchException {
 		EntityType entityType = config.getEntityType(t.getRole());
@@ -226,8 +225,7 @@ public class Brat2BIREConverter {
 		int fromTokenIndex = findTokenForPosition(t.getStart(), tokenization, true);
 		int toTokenIndex = findTokenForPosition(t.getEnd(), tokenization, false) + 1;
 
-		MutableEntityAnnotation entity = new MutableEntityAnnotation(state, t.getID().id, entityType, fromTokenIndex,
-				toTokenIndex);
+		EntityAnnotation entity = new EntityAnnotation(state, t.getID().id, entityType, fromTokenIndex, toTokenIndex);
 		entity.setOriginalStart(t.getStart());
 		entity.setOriginalEnd(t.getEnd());
 		entity.setOriginalText(t.getText());
@@ -244,7 +242,7 @@ public class Brat2BIREConverter {
 		return entity;
 	}
 
-	private static MutableEntityAnnotation convertEventAnnotation(State state, AnnotationConfig config,
+	private static EntityAnnotation convertEventAnnotation(State state, AnnotationConfig config,
 			Tokenization tokenization, BratEventAnnotation e)
 					throws AnnotationTypeMissingException, AnnotationTextMismatchException {
 		Multimap<ArgumentRole, VariableID> arguments = HashMultimap.create();
@@ -258,8 +256,8 @@ public class Brat2BIREConverter {
 
 		int fromTokenIndex = findTokenForPosition(e.getTrigger().getStart(), tokenization, true);
 		int toTokenIndex = findTokenForPosition(e.getTrigger().getEnd(), tokenization, false) + 1;
-		MutableEntityAnnotation entity = new MutableEntityAnnotation(state, e.getID().id, entityType, arguments,
-				fromTokenIndex, toTokenIndex);
+		EntityAnnotation entity = new EntityAnnotation(state, e.getID().id, entityType, arguments, fromTokenIndex,
+				toTokenIndex);
 		entity.setOriginalStart(e.getTrigger().getStart());
 		entity.setOriginalEnd(e.getTrigger().getEnd());
 		entity.setOriginalText(e.getTrigger().getText());
@@ -275,24 +273,28 @@ public class Brat2BIREConverter {
 		return entity;
 	}
 
-	private static void convertRelationAnnotation(State state, AnnotationConfig config, BratRelationAnnotation t) {
-		Multimap<ArgumentRole, VariableID> arguments = HashMultimap.create();
-		for (Entry<String, ID<? extends BratAnnotation>> entry : t.getArguments().entrySet()) {
-			arguments.put(new ArgumentRole(entry.getKey()), new VariableID(entry.getValue().id));
-		}
-		EntityType entityType = config.getEntityType(t.getRole());
-		/*
-		 * TODO relations are not motivated by tokens in the text and thus have
-		 * no start, end and text attribute. Here, these values are filled with
-		 * placeholder values
-		 */
-		MutableEntityAnnotation entity = new MutableEntityAnnotation(state, t.getID().id, entityType, arguments, -1,
-				-1);
-		state.addMutableEntity(entity);
-	}
-
-	private static void convertAttributeAnnotation(State state, AnnotationConfig config, BratAttributeAnnotation t) {
-	}
+	// private static void convertRelationAnnotation(State state,
+	// AnnotationConfig config, BratRelationAnnotation t) {
+	// Multimap<ArgumentRole, VariableID> arguments = HashMultimap.create();
+	// for (Entry<String, ID<? extends BratAnnotation>> entry :
+	// t.getArguments().entrySet()) {
+	// arguments.put(new ArgumentRole(entry.getKey()), new
+	// VariableID(entry.getValue().id));
+	// }
+	// EntityType entityType = config.getEntityType(t.getRole());
+	// /*
+	// * TODO relations are not motivated by tokens in the text and thus have
+	// * no start, end and text attribute. Here, these values are filled with
+	// * placeholder values
+	// */
+	// EntityAnnotation entity = new EntityAnnotation(state, t.getID().id,
+	// entityType, arguments, -1, -1);
+	// state.addMutableEntity(entity);
+	// }
+	//
+	// private static void convertAttributeAnnotation(State state,
+	// AnnotationConfig config, BratAttributeAnnotation t) {
+	// }
 
 	private static int findTokenForPosition(int documentLevelCharacterPosition, Tokenization tokenization,
 			boolean findLowerBound) {

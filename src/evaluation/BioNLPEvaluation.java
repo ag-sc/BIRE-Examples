@@ -10,11 +10,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.util.Set;
 
 import com.google.common.collect.Multimap;
 
@@ -22,10 +21,9 @@ import corpus.SubDocument;
 import corpus.Token;
 import corpus.parser.FileUtils;
 import corpus.parser.bionlp.julie.Tokenization;
-import logging.Log;
 import utility.VariableID;
-import variables.AbstractEntityAnnotation;
 import variables.ArgumentRole;
+import variables.EntityAnnotation;
 import variables.State;
 
 public class BioNLPEvaluation {
@@ -43,8 +41,8 @@ public class BioNLPEvaluation {
 	// "Phosphorylation", "Regulation", "Positive_regulation",
 	// "Negative_regulation"));
 
-	public static boolean isEvent(AbstractEntityAnnotation e) {
-		return e.getArguments().size() > 0;
+	public static boolean isEvent(EntityAnnotation e) {
+		return e.getReadOnlyArguments().size() > 0;
 	}
 
 	private static String convertToEntityID(String rawID) {
@@ -57,7 +55,7 @@ public class BioNLPEvaluation {
 
 	public static String stateToBioNLPString(State state) {
 		StringBuilder builder = new StringBuilder();
-		for (AbstractEntityAnnotation e : state.getEntities()) {
+		for (EntityAnnotation e : state.getEntities()) {
 			if (!isEvent(e)) {
 				builder.append(entityToBioNLPString(e));
 				builder.append("\n");
@@ -69,7 +67,7 @@ public class BioNLPEvaluation {
 		return builder.toString();
 	}
 
-	public static String entityToBioNLPString(AbstractEntityAnnotation e) {
+	public static String entityToBioNLPString(EntityAnnotation e) {
 		SubDocument doc = (SubDocument) e.getState().getDocument();
 		List<Token> tokens = e.getTokens();
 		String pattern = "%s\t%s %s %s\t%s";
@@ -82,7 +80,7 @@ public class BioNLPEvaluation {
 		return String.format(pattern, convertedID, type, from, to, text);
 	}
 
-	public static String eventToBioNLPString(AbstractEntityAnnotation e) {
+	public static String eventToBioNLPString(EntityAnnotation e) {
 		SubDocument doc = (SubDocument) e.getState().getDocument();
 		List<Token> tokens = e.getTokens();
 		String triggerPattern = "%s\t%s %s %s\t%s";
@@ -100,8 +98,8 @@ public class BioNLPEvaluation {
 		String trigger = String.format(triggerPattern, triggerID, type, from, to, text);
 		String event = String.format(eventPattern, convertedID, type, triggerID);
 
-		for (Entry<ArgumentRole, VariableID> arg : e.getArguments().entries()) {
-			AbstractEntityAnnotation argEntity = e.getEntity(arg.getValue());
+		for (Entry<ArgumentRole, VariableID> arg : e.getReadOnlyArguments().entries()) {
+			EntityAnnotation argEntity = e.getEntity(arg.getValue());
 			String convertedArgID = null;
 			if (isEvent(argEntity)) {
 				convertedArgID = convertToEventID(arg.getValue().id);
@@ -114,16 +112,16 @@ public class BioNLPEvaluation {
 	}
 
 	public static double strictEquality(State state, State goldState) {
-		Collection<AbstractEntityAnnotation> entities = state.getEntities();
-		Collection<AbstractEntityAnnotation> goldEntities = goldState.getEntities();
+		Collection<EntityAnnotation> entities = state.getEntities();
+		Collection<EntityAnnotation> goldEntities = goldState.getEntities();
 		double tpGold = 0;
 		double tpPredicted = 0;
 		double fp = 0;
 		double fn = 0;
 
-		for (AbstractEntityAnnotation goldEntity : goldEntities) {
+		for (EntityAnnotation goldEntity : goldEntities) {
 			boolean match = false;
-			for (AbstractEntityAnnotation entity : entities) {
+			for (EntityAnnotation entity : entities) {
 				match = matchEntities(entity, goldEntity);
 				if (match)
 					break;
@@ -134,9 +132,9 @@ public class BioNLPEvaluation {
 				fn++;
 		}
 
-		for (AbstractEntityAnnotation entity : entities) {
+		for (EntityAnnotation entity : entities) {
 			boolean match = false;
-			for (AbstractEntityAnnotation goldEntity : goldEntities) {
+			for (EntityAnnotation goldEntity : goldEntities) {
 				match = matchEntities(entity, goldEntity);
 				if (match)
 					break;
@@ -190,7 +188,7 @@ public class BioNLPEvaluation {
 	 * @param e2
 	 * @return
 	 */
-	private static boolean matchEntities(AbstractEntityAnnotation e1, AbstractEntityAnnotation e2) {
+	private static boolean matchEntities(EntityAnnotation e1, EntityAnnotation e2) {
 		if (!e1.getType().getName().equals(e2.getType().getName()))
 			return false;
 		if (e1.getBeginTokenIndex() != e2.getBeginTokenIndex() || e1.getEndTokenIndex() != e2.getEndTokenIndex())
@@ -210,9 +208,9 @@ public class BioNLPEvaluation {
 	 * @param e2
 	 * @return
 	 */
-	private static boolean matchArguments(AbstractEntityAnnotation e1, AbstractEntityAnnotation e2) {
-		Multimap<ArgumentRole, VariableID> arguments1 = e1.getArguments();
-		Multimap<ArgumentRole, VariableID> arguments2 = e2.getArguments();
+	private static boolean matchArguments(EntityAnnotation e1, EntityAnnotation e2) {
+		Multimap<ArgumentRole, VariableID> arguments1 = e1.getReadOnlyArguments();
+		Multimap<ArgumentRole, VariableID> arguments2 = e2.getReadOnlyArguments();
 		// this is a fast-reject test
 		if (arguments1.size() != arguments2.size())
 			return false;
@@ -239,8 +237,8 @@ public class BioNLPEvaluation {
 	 * @param argument2
 	 * @return
 	 */
-	private static boolean containsArgument(AbstractEntityAnnotation e1, Multimap<ArgumentRole, VariableID> arguments1,
-			AbstractEntityAnnotation e2, Entry<ArgumentRole, VariableID> argument2) {
+	private static boolean containsArgument(EntityAnnotation e1, Multimap<ArgumentRole, VariableID> arguments1,
+			EntityAnnotation e2, Entry<ArgumentRole, VariableID> argument2) {
 		Collection<VariableID> possibleMatches = arguments1.get(argument2.getKey());
 		for (VariableID entityID : possibleMatches) {
 			if (matchEntities(e1.getEntity(entityID), e2.getEntity(argument2.getValue())))

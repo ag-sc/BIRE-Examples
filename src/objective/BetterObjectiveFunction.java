@@ -11,15 +11,15 @@ import com.google.common.collect.Multimap;
 
 import learning.ObjectiveFunction;
 import utility.VariableID;
-import variables.EntityAnnotation;
 import variables.ArgumentRole;
+import variables.EntityAnnotation;
 import variables.State;
 
-public class DefaultObjectiveFunction extends ObjectiveFunction<State, State>implements Serializable {
+public class BetterObjectiveFunction extends ObjectiveFunction<State, State>implements Serializable {
 
-	private static Logger log = LogManager.getFormatterLogger(DefaultObjectiveFunction.class.getName());
+	private static Logger log = LogManager.getFormatterLogger(BetterObjectiveFunction.class.getName());
 
-	public DefaultObjectiveFunction() {
+	public BetterObjectiveFunction() {
 	}
 
 	@Override

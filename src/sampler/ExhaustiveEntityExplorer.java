@@ -10,7 +10,6 @@ import org.apache.logging.log4j.Logger;
 
 import corpus.AnnotationConfig;
 import corpus.Token;
-import objective.DefaultObjectiveFunction;
 import sampling.Explorer;
 import utility.VariableID;
 import variables.EntityAnnotation;
@@ -62,7 +61,6 @@ public class ExhaustiveEntityExplorer implements Explorer<State> {
 		return generatedStates;
 	}
 
-	
 	private List<State> generateStatesForTokens(State previousState) {
 		List<State> generatedStates = new ArrayList<State>();
 		List<Token> tokens = previousState.getDocument().getTokens();

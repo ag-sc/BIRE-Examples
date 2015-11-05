@@ -19,11 +19,13 @@ import learning.ObjectiveFunction;
 import learning.Scorer;
 import learning.Trainer;
 import objective.DefaultObjectiveFunction;
+import sampler.DefaultInitializer;
 import sampler.ExhaustiveBoundaryExplorer;
 import sampler.ExhaustiveEntityExplorer;
 import sampler.RelationExplorer;
 import sampling.DefaultSampler;
 import sampling.Explorer;
+import sampling.Initializer;
 import templates.AbstractTemplate;
 import templates.ContextTemplate;
 import templates.MorphologicalTemplate;
@@ -35,11 +37,11 @@ public class InspectLearning {
 	private static Logger log = LogManager.getFormatterLogger(InspectLearning.class.getName());
 
 	public static void main(String[] args) {
-		Corpus<? extends AnnotatedDocument<State>> corpus = null;
+		Corpus<? extends AnnotatedDocument<State, State>> corpus = null;
 		AnnotationConfig config = null;
 		switch (1) {
 		case 0:
-			DefaultCorpus<AnnotatedDocument<State>> dummyCorpus = DummyData.getDummyData();
+			DefaultCorpus<AnnotatedDocument<State, State>> dummyCorpus = DummyData.getDummyData();
 			config = dummyCorpus.getCorpusConfig();
 			corpus = dummyCorpus;
 			break;
@@ -52,7 +54,7 @@ public class InspectLearning {
 		}
 
 		log.debug("Corpus:\n%s", corpus);
-		List<? extends AnnotatedDocument<State>> documents = corpus.getDocuments().subList(0, 1);
+		List<? extends AnnotatedDocument<State, State>> documents = corpus.getDocuments().subList(0, 1);
 
 		List<AbstractTemplate<State>> templates = new ArrayList<>();
 		templates.add(new RelationTemplate());
@@ -62,18 +64,20 @@ public class InspectLearning {
 
 		Scorer<State> scorer = new Scorer<>(model);
 
-		ObjectiveFunction<State> objective = new DefaultObjectiveFunction();
+		ObjectiveFunction<State, State> objective = new DefaultObjectiveFunction();
 
-		List<Explorer<State>> samplers = new ArrayList<>();
-		samplers.add(new ExhaustiveEntityExplorer(config));
-		samplers.add(new ExhaustiveBoundaryExplorer());
-		samplers.add(new RelationExplorer(20));
-		DefaultSampler<State> sampler = new DefaultSampler<>(model, scorer, objective, samplers);
+		Initializer<State, State> initializer = new DefaultInitializer();
+		List<Explorer<State>> explorers = new ArrayList<>();
+		explorers.add(new ExhaustiveEntityExplorer(config));
+		explorers.add(new ExhaustiveBoundaryExplorer());
+		explorers.add(new RelationExplorer(20));
+		DefaultSampler<State, State, State> sampler = new DefaultSampler<>(model, scorer, objective, initializer,
+				explorers);
 
-		Trainer<State> trainer = new Trainer<>(model, scorer, sampler);
+		Trainer<State> trainer = new Trainer<>(model, scorer);
 
 		Learner<State> learner = new DefaultLearner<>(model, scorer, 0.1);
 
-		trainer.train(learner, documents, 1, 10);
+		trainer.train(sampler, learner, documents, 1, 10);
 	}
 }

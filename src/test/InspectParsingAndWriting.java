@@ -39,7 +39,7 @@ public class InspectParsingAndWriting {
 				null);
 
 		List<SubDocument> documents = corpus.getDocuments();
-		List<State> states = documents.stream().map(d -> d.getGoldState()).collect(Collectors.toList());
+		List<State> states = documents.stream().map(d -> d.getGoldResult()).collect(Collectors.toList());
 		Log.d("#####################");
 		Set<File> files = BioNLPEvaluation.statesToBioNLPFiles(predDir, states, true);
 		Log.d("Parsed and written %s documents", files.size());

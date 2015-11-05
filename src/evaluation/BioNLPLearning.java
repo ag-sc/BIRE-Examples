@@ -17,17 +17,18 @@ import corpus.BioNLPCorpus;
 import corpus.BioNLPLoader;
 import corpus.SubDocument;
 import learning.DefaultLearner;
-import learning.Learner;
 import learning.Model;
 import learning.ObjectiveFunction;
 import learning.Scorer;
 import learning.Trainer;
-import objective.DefaultObjectiveFunction;
+import objective.BetterObjectiveFunction;
+import sampler.DefaultInitializer;
 import sampler.ExhaustiveBoundaryExplorer;
 import sampler.ExhaustiveEntityExplorer;
 import sampler.RelationExplorer;
 import sampling.DefaultSampler;
 import sampling.Explorer;
+import sampling.Initializer;
 import templates.AbstractTemplate;
 import templates.ContextTemplate;
 import templates.MorphologicalTemplate;
@@ -38,10 +39,9 @@ public class BioNLPLearning {
 	private static Logger log = LogManager.getFormatterLogger();
 
 	public static void main(String[] args) {
-		// System.setProperty("log4j.configurationFile", "res/log4j2.xml");
 		// int trainSize = 190;
 
-		int trainSize = 2;
+		int trainSize = 1;
 		int testSize = 1;
 		if (args != null && args.length == 2) {
 			trainSize = Integer.parseInt(args[0]);
@@ -93,29 +93,31 @@ public class BioNLPLearning {
 			}
 			log.info("Train/test: => #train: %s, #test: %s", train.size(), test.size());
 
+			ObjectiveFunction<State, State> objective = new BetterObjectiveFunction();
 			List<AbstractTemplate<State>> templates = new ArrayList<>();
 			templates.add(new RelationTemplate());
 			templates.add(new MorphologicalTemplate());
 			templates.add(new ContextTemplate());
+			// templates.add(new ObjectiveFunctionTemplate(objective));
 			Model<State> model = new Model<>(templates);
 
 			Scorer<State> scorer = new Scorer<>(model);
 
-			ObjectiveFunction<State> objective = new DefaultObjectiveFunction();
+			Initializer<State, State> initializer = new DefaultInitializer();
+			List<Explorer<State>> explorer = new ArrayList<>();
+			explorer.add(new ExhaustiveEntityExplorer(trainCorpus.getCorpusConfig()));
+			explorer.add(new ExhaustiveBoundaryExplorer());
+			explorer.add(new RelationExplorer(20));
+			DefaultSampler<State, State, State> sampler = new DefaultSampler<>(model, scorer, objective, initializer,
+					explorer);
 
-			List<Explorer<State>> samplers = new ArrayList<>();
-			samplers.add(new ExhaustiveEntityExplorer(trainCorpus.getCorpusConfig()));
-			samplers.add(new ExhaustiveBoundaryExplorer());
-			samplers.add(new RelationExplorer(20));
-			DefaultSampler<State> sampler = new DefaultSampler<>(model, scorer, objective, samplers);
+			Trainer<State> trainer = new Trainer<>(model, scorer);
 
-			Trainer<State> trainer = new Trainer<>(model, scorer, sampler);
-
-			Learner<State> learner = new DefaultLearner<>(model, scorer, 0.1);
+			DefaultLearner<State> learner = new DefaultLearner<>(model, scorer, 1);
 
 			log.info("####################");
 			log.info("Start training");
-			trainer.train(learner, train, numberOfEpochs, numberOfSamplingSteps);
+			trainer.train(sampler, learner, train, numberOfEpochs, numberOfSamplingSteps);
 			log.info("###############");
 			log.info("Trained Model:\n%s", model.toDetailedString());
 			log.info("###############");
@@ -127,10 +129,11 @@ public class BioNLPLearning {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			predictions = trainer.test(test, numberOfSamplingSteps);
+			predictions = trainer.test(sampler, test, numberOfSamplingSteps);
 			Set<File> files = BioNLPEvaluation.statesToBioNLPFiles(outputDir, predictions, true);
 			log.info("Produced annotaion files: %s", files);
 
+			log.info("Updates: %s, Alpha: %s", learner.updates, learner.currentAlpha);
 		}
 		try {
 			ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(predictionFile));
@@ -141,10 +144,14 @@ public class BioNLPLearning {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		DefaultObjectiveFunction o = new DefaultObjectiveFunction();
+		BetterObjectiveFunction o = new BetterObjectiveFunction();
 		for (State state : predictions) {
-			State goldState = ((AnnotatedDocument<State>) state.getDocument()).getGoldState();
-			o.score(state, goldState);
+			State goldState = ((AnnotatedDocument<State, State>) state.getDocument()).getGoldResult();
+			double s = o.score(state, goldState);
+			// if (s < 0.9) {
+			// log.info("Gold: : %s", goldState);
+			// log.info("Prediction: %s\n", state);
+			// }
 		}
 		log.info("Overall performance:");
 		EvaluationUtil.printPredictionPerformance(predictions);
