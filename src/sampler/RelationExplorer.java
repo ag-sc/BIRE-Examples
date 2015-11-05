@@ -9,7 +9,7 @@ import org.apache.logging.log4j.Logger;
 import changes.StateChange;
 import logging.Log;
 import sampling.Explorer;
-import variables.MutableEntityAnnotation;
+import variables.EntityAnnotation;
 import variables.State;
 
 public class RelationExplorer implements Explorer<State> {
@@ -28,8 +28,8 @@ public class RelationExplorer implements Explorer<State> {
 			State generatedState = new State(previousState);
 
 			// pick one entity at random
-			MutableEntityAnnotation sampledEntity = SamplingHelper
-					.getRandomElement(new ArrayList<>(generatedState.getMutableEntities()));
+			EntityAnnotation sampledEntity = SamplingHelper
+					.getRandomElement(new ArrayList<>(generatedState.getNonFixedEntities()));
 			// if annotation exists
 			if (sampledEntity != null) {
 				// choose a way to alter the state
