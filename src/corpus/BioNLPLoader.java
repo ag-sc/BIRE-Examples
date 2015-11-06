@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Set;
 
 import corpus.parser.FileUtils;
-import corpus.parser.bionlp.Brat2BIREConverter;
+import corpus.parser.bionlp.BioNLP2BIREConverter;
 import corpus.parser.bionlp.BratAnnotatedDocument;
 import corpus.parser.bionlp.BratAnnotationParser;
 import corpus.parser.bionlp.BratConfigReader;
@@ -174,7 +174,7 @@ public class BioNLPLoader {
 		Log.d("### BIRE annotations...");
 		List<SubDocument> documents;
 		try {
-			documents = Brat2BIREConverter.convert(bratDoc, corpus, tokenizations);
+			documents = BioNLP2BIREConverter.convert(bratDoc, tokenizations);
 			corpus.addDocuments(documents);
 		} catch (AnnotationFileException e) {
 			e.printStackTrace();

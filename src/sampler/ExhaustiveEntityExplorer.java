@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import corpus.AnnotationConfig;
+import corpus.EntityTypeDefinition;
 import corpus.Token;
 import sampling.Explorer;
 import utility.VariableID;
@@ -42,14 +43,14 @@ public class ExhaustiveEntityExplorer implements Explorer<State> {
 		Set<VariableID> previousStatesEntityIDs = previousState.getNonFixedEntityIDs();
 		for (VariableID entityID : previousStatesEntityIDs) {
 			EntityAnnotation previousStatesEntity = previousState.getEntity(entityID);
-			Collection<EntityType> entityTypes = corpusConfig.getEntityTypes();
+			Collection<EntityTypeDefinition> entityTypeDefinitions = corpusConfig.getEntityTypeDefinitions();
 			// remove the type that this entity already has assigned
-			entityTypes.remove(previousStatesEntity.getType());
+			entityTypeDefinitions.remove(previousStatesEntity.getType());
 			// change Type of every entity to every possible type
-			for (EntityType entityType : entityTypes) {
+			for (EntityTypeDefinition entityTypeDefinition : entityTypeDefinitions) {
 				State generatedState = new State(previousState);
 				EntityAnnotation entity = generatedState.getEntity(entityID);
-				entity.setType(entityType);
+				entity.setType(entityTypeDefinition.getInstance());
 				generatedStates.add(generatedState);
 			}
 			// Create on state with that particular entity removed
@@ -67,11 +68,11 @@ public class ExhaustiveEntityExplorer implements Explorer<State> {
 		for (Token token : tokens) {
 			if (!previousState.tokenHasAnnotation(token)) {
 				// Assign new entity to empty token
-				Collection<EntityType> entityTypes = corpusConfig.getEntityTypes();
-				for (EntityType entityType : entityTypes) {
+				Collection<EntityTypeDefinition> entityTypeDefinitions = corpusConfig.getEntityTypeDefinitions();
+				for (EntityTypeDefinition entityTypeDefinition : entityTypeDefinitions) {
 					State generatedState = new State(previousState);
-					EntityAnnotation tokenAnnotation = new EntityAnnotation(generatedState, entityType,
-							token.getIndex(), token.getIndex() + 1);
+					EntityAnnotation tokenAnnotation = new EntityAnnotation(generatedState,
+							entityTypeDefinition.getInstance(), token.getIndex(), token.getIndex() + 1);
 					generatedState.addEntity(tokenAnnotation);
 					generatedStates.add(generatedState);
 				}

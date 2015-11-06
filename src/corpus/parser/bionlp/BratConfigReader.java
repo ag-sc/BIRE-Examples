@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.StringTokenizer;
 
 import corpus.AnnotationConfig;
+import corpus.EntityTypeDefinition;
 import logging.Log;
 import variables.Argument;
 import variables.ArgumentRole;
@@ -29,7 +30,7 @@ public class BratConfigReader {
 	private static final String ATTRIBUTE_SECTION = "[attributes]";
 
 	private Set<Argument> eventReferencingArguments;
-	private Set<EntityType> events;
+	private Set<EntityTypeDefinition> events;
 
 	/**
 	 * Parses the file for the given file path and returns the respective
@@ -43,7 +44,7 @@ public class BratConfigReader {
 		Log.off();
 		try {
 			eventReferencingArguments = new HashSet<Argument>();
-			events = new HashSet<EntityType>();
+			events = new HashSet<EntityTypeDefinition>();
 			BufferedReader reader = new BufferedReader(new FileReader(configFile));
 			AnnotationConfig config = new AnnotationConfig();
 			ParseState state = null;
@@ -51,8 +52,7 @@ public class BratConfigReader {
 			int lineNumber = 1;
 			while ((line = reader.readLine()) != null) {
 				if (line.startsWith(COMMENT_INDICATOR)) {
-					Log.i(lineNumber + ": Skip comment " + ": \""
-							+ line + "\"");
+					Log.i(lineNumber + ": Skip comment " + ": \"" + line + "\"");
 				} else if (line.startsWith(SEPARATION_INDICATOR)) {
 					Log.i(lineNumber + ": Separation line");
 				} else if (line.trim().length() == 0) {
@@ -83,14 +83,13 @@ public class BratConfigReader {
 	 */
 	private void resolveEventReferences() {
 		for (Argument argument : eventReferencingArguments) {
-			for (EntityType event : events) {
+			for (EntityTypeDefinition event : events) {
 				argument.getTypes().add(event.getName());
 			}
 		}
 	}
 
-	private ParseState parseLine(AnnotationConfig config, String line,
-			ParseState state) {
+	private ParseState parseLine(AnnotationConfig config, String line, ParseState state) {
 
 		if (line.equals(ENTITY_SECTION)) {
 			Log.i("Begin of entity section");
@@ -131,12 +130,11 @@ public class BratConfigReader {
 		StringTokenizer tokenizer = new StringTokenizer(line);
 		if (tokenizer.hasMoreTokens()) {
 			String entityName = tokenizer.nextToken();
-			EntityType type = new EntityType(entityName);
+			EntityTypeDefinition type = new EntityTypeDefinition(entityName);
 			config.addEntityType(type);
 		}
 		if (tokenizer.hasMoreTokens()) {
-			Log.i("Warning: line contains no supported entity: "
-					+ line);
+			Log.i("Warning: line contains no supported entity: " + line);
 		}
 	}
 
@@ -168,8 +166,7 @@ public class BratConfigReader {
 			else
 				optionalArguments.put(arg.getRole(), arg);
 		}
-		EntityType type = new EntityType(typeName, coreArguments,
-				optionalArguments);
+		EntityTypeDefinition type = new EntityTypeDefinition(typeName, coreArguments, optionalArguments);
 		config.addEntityType(type);
 		events.add(type);
 	}

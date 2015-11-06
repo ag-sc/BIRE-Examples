@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import corpus.AnnotatedDocument;
+import corpus.LabeledDocument;
 import corpus.AnnotationConfig;
 import corpus.BioNLPCorpus;
 import corpus.BioNLPLoader;
@@ -23,12 +23,14 @@ import learning.Scorer;
 import learning.Trainer;
 import logging.Log;
 import objective.DefaultObjectiveFunction;
-import sampler.DefaultSampler;
+import sampler.DefaultInitializer;
 import sampler.ExhaustiveBoundaryExplorer;
 import sampler.ExhaustiveEntityExplorer;
 import sampler.RelationExplorer;
 import sampling.AbstractSampler;
+import sampling.DefaultSampler;
 import sampling.Explorer;
+import sampling.Initializer;
 import templates.AbstractTemplate;
 import templates.ContextTemplate;
 import templates.MorphologicalTemplate;
@@ -80,14 +82,14 @@ public class EvaluateParameters {
 	public static void evaluate() {
 		File modelDir = null;
 		File evalDir = null;
-		Corpus<? extends AnnotatedDocument<State, State>> corpus = null;
+		Corpus<? extends LabeledDocument<State, State>> corpus = null;
 		AnnotationConfig config = null;
 
 		int corpusID = BIONLP;
 		switch (corpusID) {
 		case USAGE:
 			try {
-				DefaultCorpus<AnnotatedDocument<State, State>> dummyCorpus = UsageLoader
+				DefaultCorpus<LabeledDocument<State, State>> dummyCorpus = UsageLoader
 						.loadDatasetFromBinaries(DatasetConfig.getUSAGEJavaBinFilepath());
 				config = dummyCorpus.getCorpusConfig();
 				corpus = dummyCorpus;
@@ -116,10 +118,10 @@ public class EvaluateParameters {
 
 		// Leave-one-out
 
-		List<? extends AnnotatedDocument<State, State>> allDocuments = corpus.getDocuments();
+		List<? extends LabeledDocument<State, State>> allDocuments = corpus.getDocuments();
 		for (int i = 0; i < allDocuments.size(); i++) {
-			AnnotatedDocument<State, State> doc = allDocuments.get(i);
-			Log.d("%s: %s", i, doc.getGoldQuery());
+			LabeledDocument<State, State> doc = allDocuments.get(i);
+			Log.d("%s: %s", i, doc.getGoldResult());
 		}
 		// allDocuments = allDocuments.subList(137, 140);
 
@@ -127,7 +129,7 @@ public class EvaluateParameters {
 	}
 
 	private static void alphaOmegaGridSearch(File modelDir, File evalDir,
-			List<? extends AnnotatedDocument<State, State>> allDocuments, AnnotationConfig corpusConfig) {
+			List<? extends LabeledDocument<State, State>> allDocuments, AnnotationConfig corpusConfig) {
 		int defaultStep = 10;
 		int defaultEpoch = 5;
 
@@ -159,8 +161,9 @@ public class EvaluateParameters {
 		TaggedTimer.printTimings();
 	}
 
-	private static void basicParamsGridSearch(File modelDir, File evalDir, List<AbstractSampler<State, State>> samplers,
-			List<? extends AnnotatedDocument<State, State>> allDocuments, AnnotationConfig corpusConfig) {
+	private static void basicParamsGridSearch(File modelDir, File evalDir,
+			List<AbstractSampler<State, State, State>> samplers,
+			List<? extends LabeledDocument<State, State>> allDocuments, AnnotationConfig corpusConfig) {
 		int defaultStep = 10;
 		int defaultEpoch = 5;
 		List<Params> step = new ArrayList<>();
@@ -199,7 +202,7 @@ public class EvaluateParameters {
 	}
 
 	private static void evaluateParamConfigs(List<Params> paramsList, int nCrossValidation,
-			List<? extends AnnotatedDocument<State, State>> documents, AnnotationConfig corpusConfig, String descriptor,
+			List<? extends LabeledDocument<State, State>> documents, AnnotationConfig corpusConfig, String descriptor,
 			File modelDir, File evalDir) {
 		Log.d("############################");
 		Log.d("############################");
@@ -217,9 +220,9 @@ public class EvaluateParameters {
 				Log.d("############################");
 				Log.d("############################");
 				Log.d("Cross Validation: %s/%s", i + 1, nCrossValidation);
-				DataSplit<? extends AnnotatedDocument<State, State>> split = new DataSplit<>(documents, 0.8);
-				List<? extends AnnotatedDocument<State, State>> train = split.getTrain();
-				List<? extends AnnotatedDocument<State, State>> test = split.getTest();
+				DataSplit<? extends LabeledDocument<State, State>> split = new DataSplit<>(documents, 0.8);
+				List<? extends LabeledDocument<State, State>> train = split.getTrain();
+				List<? extends LabeledDocument<State, State>> test = split.getTest();
 
 				List<AbstractTemplate<State>> templates = new ArrayList<>();
 				templates.add(new RelationTemplate());
@@ -231,11 +234,13 @@ public class EvaluateParameters {
 
 				ObjectiveFunction<State, State> objective = new DefaultObjectiveFunction();
 
-				List<Explorer<State>> samplers = new ArrayList<>();
-				samplers.add(new ExhaustiveEntityExplorer(corpusConfig));
-				samplers.add(new ExhaustiveBoundaryExplorer());
-				samplers.add(new RelationExplorer(20));
-				DefaultSampler sampler = new DefaultSampler(model, scorer, objective, samplers);
+				Initializer<State, State> initializer = new DefaultInitializer();
+				List<Explorer<State>> explorers = new ArrayList<>();
+				explorers.add(new ExhaustiveEntityExplorer(corpusConfig));
+				explorers.add(new ExhaustiveBoundaryExplorer());
+				explorers.add(new RelationExplorer(20, corpusConfig));
+				DefaultSampler<State, State, State> sampler = new DefaultSampler<>(model, scorer, objective,
+						initializer, explorers);
 
 				Trainer<State> trainer = new Trainer<>(model, scorer);
 

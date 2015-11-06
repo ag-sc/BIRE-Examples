@@ -19,6 +19,9 @@ public class BetterObjectiveFunction extends ObjectiveFunction<State, State>impl
 
 	private static Logger log = LogManager.getFormatterLogger(BetterObjectiveFunction.class.getName());
 
+	/**
+	 * WORK IN PROGRESS
+	 */
 	public BetterObjectiveFunction() {
 	}
 

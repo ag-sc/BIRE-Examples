@@ -18,9 +18,10 @@ import java.util.Map;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
-import corpus.AnnotatedDocument;
 import corpus.AnnotationConfig;
 import corpus.DefaultCorpus;
+import corpus.EntityTypeDefinition;
+import corpus.LabeledDocument;
 import corpus.Token;
 import corpus.parser.ParsingUtils;
 import logging.Log;
@@ -57,11 +58,11 @@ public class UsageParser {
 	public static void main(String[] args) {
 		File annDir = new File("res/usage/de");
 
-		DefaultCorpus<AnnotatedDocument<State, State>> corpus = parseCorpus(annDir);
+		DefaultCorpus<LabeledDocument<State, State>> corpus = parseCorpus(annDir);
 		Log.d("Corpus: %s", corpus.toDetailedString());
 	}
 
-	public static DefaultCorpus<AnnotatedDocument<State, State>> parseCorpus(File annDir) {
+	public static DefaultCorpus<LabeledDocument<State, State>> parseCorpus(File annDir) {
 		File[] allFiles = annDir.listFiles();
 
 		Map<String, File> textFiles = new HashMap<String, File>();
@@ -106,7 +107,7 @@ public class UsageParser {
 		}
 
 		AnnotationConfig config = getUsageConfig();
-		DefaultCorpus<AnnotatedDocument<State, State>> corpus = new DefaultCorpus<>(config);
+		DefaultCorpus<LabeledDocument<State, State>> corpus = new DefaultCorpus<>(config);
 
 		for (String category : textFiles.keySet()) {
 			corpus.addDocuments(parseFile(corpus, category, textFiles.get(category), annotationFilesA1.get(category),
@@ -117,10 +118,10 @@ public class UsageParser {
 		return corpus;
 	}
 
-	private static Collection<AnnotatedDocument<State, State>> parseFile(
-			DefaultCorpus<AnnotatedDocument<State, State>> corpus, String category, File t, File a1, File r1) {
+	private static Collection<LabeledDocument<State, State>> parseFile(
+			DefaultCorpus<LabeledDocument<State, State>> corpus, String category, File t, File a1, File r1) {
 		Log.d("Process category %s", category);
-		Map<String, AnnotatedDocument<State, State>> documents = parseDocument(corpus, category, t);
+		Map<String, LabeledDocument<State, State>> documents = parseDocument(corpus, category, t);
 
 		addEntities(corpus, a1, documents);
 		addRelations(corpus, r1, documents);
@@ -128,9 +129,9 @@ public class UsageParser {
 		return documents.values();
 	}
 
-	private static Map<String, AnnotatedDocument<State, State>> parseDocument(
-			DefaultCorpus<AnnotatedDocument<State, State>> corpus, String category, File t) {
-		Map<String, AnnotatedDocument<State, State>> documents = new HashMap<>();
+	private static Map<String, LabeledDocument<State, State>> parseDocument(
+			DefaultCorpus<LabeledDocument<State, State>> corpus, String category, File t) {
+		Map<String, LabeledDocument<State, State>> documents = new HashMap<>();
 		try {
 			FileInputStream fileStream = new FileInputStream(t);
 			InputStreamReader streamReader = new InputStreamReader(fileStream, "UTF-8");
@@ -148,7 +149,7 @@ public class UsageParser {
 
 				List<Token> tokens = tokenize(content);
 
-				AnnotatedDocument<State, State> doc = new AnnotatedDocument<>(
+				LabeledDocument<State, State> doc = new LabeledDocument<>(
 						String.format("%s-%s-%s-%s", category, documentID, productID, reviewID), content, tokens);
 				doc.setPriorKnowledge(new State(doc));
 				doc.setGoldResult(new State(doc));
@@ -163,8 +164,8 @@ public class UsageParser {
 		return documents;
 	}
 
-	private static void addEntities(DefaultCorpus<AnnotatedDocument<State, State>> corpus, File annotationFile,
-			Map<String, AnnotatedDocument<State, State>> documents) {
+	private static void addEntities(DefaultCorpus<LabeledDocument<State, State>> corpus, File annotationFile,
+			Map<String, LabeledDocument<State, State>> documents) {
 
 		try {
 			FileInputStream fileStream = new FileInputStream(annotationFile);
@@ -182,7 +183,7 @@ public class UsageParser {
 				String entityID = columns[5];
 				String subjectivity = columns[6];
 				String relatedness = columns[7];
-				AnnotatedDocument<State, State> doc = documents.get(documentID);
+				LabeledDocument<State, State> doc = documents.get(documentID);
 				State goldState = doc.getGoldResult();
 
 				if (SUBJECTIVE_TYPE_NAME.equals(entityTypeName)) {
@@ -193,7 +194,7 @@ public class UsageParser {
 					entityTypeName = subjectivity.toUpperCase() + "-" + entityTypeName;
 				}
 
-				EntityType entityType = corpus.getCorpusConfig().getEntityType(entityTypeName);
+				EntityType entityType = new EntityType(entityTypeName);
 				if (entityType == null) {
 					Log.w("EnitityType %s for annotation \"%s\" in file %s and line %s not found in given config.",
 							entityTypeName, text, annotationFile, lineNumber);
@@ -226,8 +227,8 @@ public class UsageParser {
 		}
 	}
 
-	private static void addRelations(DefaultCorpus<AnnotatedDocument<State, State>> corpus, File relationFile,
-			Map<String, AnnotatedDocument<State, State>> documents) {
+	private static void addRelations(DefaultCorpus<LabeledDocument<State, State>> corpus, File relationFile,
+			Map<String, LabeledDocument<State, State>> documents) {
 
 		try {
 			FileInputStream fileStream = new FileInputStream(relationFile);
@@ -242,9 +243,9 @@ public class UsageParser {
 				String argument1ID = columns[2];
 				String argument2ID = columns[3];
 
-				AnnotatedDocument<State, State> doc = documents.get(documentID);
+				LabeledDocument<State, State> doc = documents.get(documentID);
 				State goldState = doc.getGoldResult();
-				EntityType entityType = corpus.getCorpusConfig().getEntityType(entityTypeName);
+				EntityType entityType = new EntityType(entityTypeName);
 				if (entityType == null) {
 					Log.w("EnitityType \"%s\" for annotation in file %s and line %s not found in given config.",
 							entityTypeName, relationFile, lineNumber);
@@ -338,11 +339,11 @@ public class UsageParser {
 		 * one of the arguments as a trigger.
 		 */
 		AnnotationConfig config = new AnnotationConfig();
-		EntityType aspectType = new EntityType(ASPECT_TYPE_NAME);
-		EntityType positiveSubjectiveType = new EntityType(POSITIVE_SUBJECTIVE_TYPE_NAME);
-		EntityType neutralSubjectiveType = new EntityType(NEUTRAL_SUBJECTIVE_TYPE_NAME);
-		EntityType negativeSubjectiveType = new EntityType(NEGATIVE_SUBJECTIVE_TYPE_NAME);
-		EntityType unknownSubjectiveType = new EntityType(UNKNOWN_SUBJECTIVE_TYPE_NAME);
+		EntityTypeDefinition aspectType = new EntityTypeDefinition(ASPECT_TYPE_NAME);
+		EntityTypeDefinition positiveSubjectiveType = new EntityTypeDefinition(POSITIVE_SUBJECTIVE_TYPE_NAME);
+		EntityTypeDefinition neutralSubjectiveType = new EntityTypeDefinition(NEUTRAL_SUBJECTIVE_TYPE_NAME);
+		EntityTypeDefinition negativeSubjectiveType = new EntityTypeDefinition(NEGATIVE_SUBJECTIVE_TYPE_NAME);
+		EntityTypeDefinition unknownSubjectiveType = new EntityTypeDefinition(UNKNOWN_SUBJECTIVE_TYPE_NAME);
 
 		Map<ArgumentRole, Argument> targetSubjectiveCoreArguments = new HashMap<>();
 		targetSubjectiveCoreArguments.put(ASPECT_ROLE, new Argument(ASPECT_ROLE, Arrays.asList(ASPECT_TYPE_NAME)));
@@ -352,15 +353,15 @@ public class UsageParser {
 		// POSITIVE_SUBJECTIVE_TYPE_NAME,
 		// NEUTRAL_SUBJECTIVE_TYPE_NAME,
 		// NEGATIVE_SUBJECTIVE_TYPE_NAME)));
-		EntityType targetSubjectiveRelationType = new EntityType(TARGET_SUBJECTIVE_TYPE_NAME,
+		EntityTypeDefinition targetSubjectiveRelationType = new EntityTypeDefinition(TARGET_SUBJECTIVE_TYPE_NAME,
 				targetSubjectiveCoreArguments, new HashMap<ArgumentRole, Argument>());
 
 		Map<ArgumentRole, Argument> coreferenceCoreArguments = new HashMap<>();
 		coreferenceCoreArguments.put(REFERENT_ROLE, new Argument(REFERENT_ROLE, Arrays.asList(ASPECT_TYPE_NAME)));
 		// coreferenceCoreArguments.put(COREFERENCE_ROLE_NAME, new Argument(
 		// COREFERENCE_ROLE_NAME, Arrays.asList(ASPECT_TYPE_NAME)));
-		EntityType coreferenceRelationType = new EntityType(COREFERENCE_TYPE_NAME, coreferenceCoreArguments,
-				new HashMap<ArgumentRole, Argument>());
+		EntityTypeDefinition coreferenceRelationType = new EntityTypeDefinition(COREFERENCE_TYPE_NAME,
+				coreferenceCoreArguments, new HashMap<ArgumentRole, Argument>());
 
 		config.addEntityType(aspectType);
 		config.addEntityType(positiveSubjectiveType);

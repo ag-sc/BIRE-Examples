@@ -34,9 +34,9 @@ import variables.EntityAnnotation;
 import variables.EntityType;
 import variables.State;
 
-public class Brat2BIREConverter {
+public class BioNLP2BIREConverter {
 
-	private static Logger log = LogManager.getFormatterLogger(Brat2BIREConverter.class.getName());
+	private static Logger log = LogManager.getFormatterLogger(BioNLP2BIREConverter.class.getName());
 
 	private static final Comparator<BratTextBoundAnnotation> textBoundAnnotationComparator = new Comparator<BratTextBoundAnnotation>() {
 
@@ -59,8 +59,8 @@ public class Brat2BIREConverter {
 	 * @throws AnnotationFileException
 	 * @throws Exception
 	 */
-	public static List<SubDocument> convert(BratAnnotatedDocument bratDoc, BioNLPCorpus corpus,
-			List<Tokenization> tokenizations) throws AnnotationFileException {
+	public static List<SubDocument> convert(BratAnnotatedDocument bratDoc, List<Tokenization> tokenizations)
+			throws AnnotationFileException {
 		List<SubDocument> documents = new ArrayList<SubDocument>();
 		log.debug("Split BratDocument %s in %s documents", bratDoc.getDocumentName(), tokenizations.size());
 		Multimap<String, BratAnnotation> annotationsByFilename = bratDoc.getManager().getAnnotationsByFilename();
@@ -102,8 +102,7 @@ public class Brat2BIREConverter {
 			for (BratTextBoundAnnotation tann : textAnnotationsA1) {
 				if (isInSentence(tann, tokenization)) {
 					try {
-						EntityAnnotation entity = convertTextBoundAnnotation(priorKnowledge, corpus.getCorpusConfig(),
-								tokenization, tann);
+						EntityAnnotation entity = convertTextBoundAnnotation(priorKnowledge, tokenization, tann);
 						entity.setFixed(true);
 						priorKnowledge.addEntity(entity);
 					} catch (Exception e) {
@@ -122,8 +121,7 @@ public class Brat2BIREConverter {
 			for (BratTextBoundAnnotation tann : textAnnotationsA2) {
 				if (isInSentence(tann, tokenization)) {
 					try {
-						EntityAnnotation entity = convertTextBoundAnnotation(goldState, corpus.getCorpusConfig(),
-								tokenization, tann);
+						EntityAnnotation entity = convertTextBoundAnnotation(goldState, tokenization, tann);
 						goldState.addEntity(entity);
 					} catch (Exception e) {
 						log.warn(e);
@@ -134,8 +132,7 @@ public class Brat2BIREConverter {
 			for (BratEventAnnotation eann : eventAnnotationsA2) {
 				if (isInSentence(eann.getTrigger(), tokenization)) {
 					try {
-						EntityAnnotation entity = convertEventAnnotation(goldState, corpus.getCorpusConfig(),
-								tokenization, eann);
+						EntityAnnotation entity = convertEventAnnotation(goldState, tokenization, eann);
 						goldState.addEntity(entity);
 					} catch (Exception e) {
 						log.warn(e);
@@ -216,10 +213,10 @@ public class Brat2BIREConverter {
 		return tokenization.absoluteStartOffset <= ann.getStart() && ann.getEnd() <= tokenization.absoluteEndOffset;
 	}
 
-	private static EntityAnnotation convertTextBoundAnnotation(State state, AnnotationConfig config,
-			Tokenization tokenization, BratTextBoundAnnotation t)
-					throws AnnotationTypeMissingException, AnnotationTextMismatchException {
-		EntityType entityType = config.getEntityType(t.getRole());
+	private static EntityAnnotation convertTextBoundAnnotation(State state, Tokenization tokenization,
+			BratTextBoundAnnotation t) throws AnnotationTypeMissingException, AnnotationTextMismatchException {
+		EntityType entityType = new EntityType(t.getRole());
+		// EntityType entityType = config.getEntityType(t.getRole());
 		if (entityType == null)
 			throw new AnnotationTypeMissingException(String.format("No entity type provided for \"%s\".", t.getRole()));
 		int fromTokenIndex = findTokenForPosition(t.getStart(), tokenization, true);
@@ -242,15 +239,15 @@ public class Brat2BIREConverter {
 		return entity;
 	}
 
-	private static EntityAnnotation convertEventAnnotation(State state, AnnotationConfig config,
-			Tokenization tokenization, BratEventAnnotation e)
-					throws AnnotationTypeMissingException, AnnotationTextMismatchException {
+	private static EntityAnnotation convertEventAnnotation(State state, Tokenization tokenization,
+			BratEventAnnotation e) throws AnnotationTypeMissingException, AnnotationTextMismatchException {
 		Multimap<ArgumentRole, VariableID> arguments = HashMultimap.create();
 		for (Entry<String, ID<? extends BratAnnotation>> entry : e.getArguments().entrySet()) {
 			arguments.put(new ArgumentRole(entry.getKey()), new VariableID(entry.getValue().id));
 		}
 
-		EntityType entityType = config.getEntityType(e.getRole());
+		// EntityType entityType = config.getEntityType(e.getRole());
+		EntityType entityType = new EntityType(e.getRole());
 		if (entityType == null)
 			throw new AnnotationTypeMissingException(String.format("No entity type provided for \"%s\".", e.getRole()));
 

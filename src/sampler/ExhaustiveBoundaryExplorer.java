@@ -1,12 +1,15 @@
 package sampler;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import evaluation.AnnotationUtils;
 import sampling.Explorer;
 import utility.VariableID;
 import variables.EntityAnnotation;
@@ -16,7 +19,7 @@ public class ExhaustiveBoundaryExplorer implements Explorer<State> {
 
 	private static Logger log = LogManager.getFormatterLogger(ExhaustiveBoundaryExplorer.class.getName());
 
-	private boolean mergeNeighbors = true;
+	private boolean mergeNeighbors = false;
 
 	public List<State> getNextStates(State previousState) {
 		List<State> generatedStates = new ArrayList<>();
@@ -81,26 +84,102 @@ public class ExhaustiveBoundaryExplorer implements Explorer<State> {
 	private List<State> generateStatesForNeighbors(State previousState) {
 		List<State> generatedStates = new ArrayList<State>();
 		Set<VariableID> previousStatesEntityIDs = previousState.getNonFixedEntityIDs();
+		// avoid duplicate merges by tracking all merged variable pairs
+		Set<MergedVariablePair> mergedVariablePairs = new HashSet<>();
 		for (VariableID entityID1 : previousStatesEntityIDs) {
 			EntityAnnotation previousStatesEntity1 = previousState.getEntity(entityID1);
 			for (VariableID entityID2 : previousStatesEntityIDs) {
 				EntityAnnotation previousStatesEntity2 = previousState.getEntity(entityID2);
-				if (previousStatesEntity1.getType() == previousStatesEntity2.getType() && (previousStatesEntity1
-						.getEndTokenIndex() == previousStatesEntity2.getBeginTokenIndex()
-						|| previousStatesEntity2.getEndTokenIndex() == previousStatesEntity1.getBeginTokenIndex())) {
+				if (!mergedVariablePairs.contains(new MergedVariablePair(entityID1, entityID2))
+						&& areMatchingNeighbors(previousStatesEntity1, previousStatesEntity2)) {
 					State generatedState = new State(previousState);
 					generatedState.removeEntity(entityID1);
 					generatedState.removeEntity(entityID2);
 					EntityAnnotation mergedEntity = new EntityAnnotation(generatedState, previousStatesEntity1);
+					generatedState.addEntity(mergedEntity);
 					mergedEntity.setBeginTokenIndex(Math.min(previousStatesEntity1.getBeginTokenIndex(),
 							previousStatesEntity2.getBeginTokenIndex()));
-					mergedEntity.setEndTokenIndex(Math.min(previousStatesEntity1.getEndTokenIndex(),
+
+					mergedEntity.setEndTokenIndex(Math.max(previousStatesEntity1.getEndTokenIndex(),
 							previousStatesEntity2.getEndTokenIndex()));
 					generatedStates.add(generatedState);
+					mergedVariablePairs.add(new MergedVariablePair(entityID1, entityID2));
 				}
 			}
 		}
 		return generatedStates;
+	}
+
+	/**
+	 * Checks if the provided entities are direct neighbors (beginning of the
+	 * one is end of the other), and have same types and arguments.
+	 * 
+	 * @param entity1
+	 * @param entity2
+	 * @return
+	 */
+	private boolean areMatchingNeighbors(EntityAnnotation entity1, EntityAnnotation entity2) {
+
+		if (entity1.getID() == entity2.getID()) {
+			return false;
+		}
+		if (!Objects.equals(entity1.getType(), entity2.getType())) {
+			return false;
+		}
+		if (entity1.getEndTokenIndex() != entity2.getBeginTokenIndex()
+				&& entity2.getEndTokenIndex() != entity1.getBeginTokenIndex()) {
+			return false;
+		}
+		if (!AnnotationUtils.matchArguments(entity1, entity2)) {
+			System.out.println(entity1);
+			System.out.println(entity2);
+			System.out.println("DAMN");
+			return false;
+		}
+		return true;
+	}
+
+	class MergedVariablePair {
+		Set<VariableID> entities = new HashSet<>();
+
+		public MergedVariablePair(VariableID enitity1, VariableID enitity2) {
+			super();
+			entities.add(enitity1);
+			entities.add(enitity2);
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((entities == null) ? 0 : entities.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			MergedVariablePair other = (MergedVariablePair) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (entities == null) {
+				if (other.entities != null)
+					return false;
+			} else if (!entities.equals(other.entities))
+				return false;
+			return true;
+		}
+
+		private ExhaustiveBoundaryExplorer getOuterType() {
+			return ExhaustiveBoundaryExplorer.this;
+		}
+
 	}
 
 }

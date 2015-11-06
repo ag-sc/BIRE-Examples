@@ -43,26 +43,28 @@ public class MorphologicalTemplate extends AbstractTemplate<State>implements Ser
 			List<Token> tokens = entity.getTokens();
 			Token first = tokens.get(0);
 			Token last = tokens.get(tokens.size() - 1);
-			String entityType = "ENTITY_TYPE=" + entity.getType().getName() + "_";
-			featureVector.set(entityType + "ALL_TOKENS_INIT_CAP", Features.StartsWithCapital.all(tokens));
-			featureVector.set(entityType + "AT_LEAST_ONE_TOKEN_INIT_CAP", Features.StartsWithCapital.any(tokens));
-			featureVector.set(entityType + "FIRST_TOKEN_INIT_CAP", Features.StartsWithCapital.first(tokens));
-			featureVector.set(entityType + "LAST_TOKEN_INIT_CAP", Features.StartsWithCapital.last(tokens));
+			String entityTypePrefix = "ENTITY_TYPE=" + entity.getType().getName() + "_";
+			featureVector.set(entityTypePrefix + "ALL_TOKENS_INIT_CAP", Features.StartsWithCapital.all(tokens));
+			featureVector.set(entityTypePrefix + "AT_LEAST_ONE_TOKEN_INIT_CAP", Features.StartsWithCapital.any(tokens));
+			featureVector.set(entityTypePrefix + "FIRST_TOKEN_INIT_CAP", Features.StartsWithCapital.first(tokens));
+			featureVector.set(entityTypePrefix + "LAST_TOKEN_INIT_CAP", Features.StartsWithCapital.last(tokens));
 
-			featureVector.set(entityType + "ALL_TOKENS_ALL_CAP", Features.AllCapital.all(tokens));
-			featureVector.set(entityType + "AT_LEAST_ONE_TOKEN_ALL_CAP", Features.AllCapital.any(tokens));
-			featureVector.set(entityType + "FIRST_TOKEN_ALL_CAP", Features.AllCapital.first(tokens));
-			featureVector.set(entityType + "LAST_TOKEN_ALL_CAP", Features.AllCapital.last(tokens));
+			featureVector.set(entityTypePrefix + "ALL_TOKENS_ALL_CAP", Features.AllCapital.all(tokens));
+			featureVector.set(entityTypePrefix + "AT_LEAST_ONE_TOKEN_ALL_CAP", Features.AllCapital.any(tokens));
+			featureVector.set(entityTypePrefix + "FIRST_TOKEN_ALL_CAP", Features.AllCapital.first(tokens));
+			featureVector.set(entityTypePrefix + "LAST_TOKEN_ALL_CAP", Features.AllCapital.last(tokens));
 
-			featureVector.set(entityType + "ALL_TOKENS_CONTAIN_DIGIT", Features.ContainsDigit.all(tokens));
-			featureVector.set(entityType + "AT_LEAST_ONE_TOKEN_CONTAINS_DIGIT", Features.ContainsDigit.any(tokens));
-			featureVector.set(entityType + "FIRST_TOKEN_CONTAINS_DIGIT", Features.ContainsDigit.first(tokens));
-			featureVector.set(entityType + "LAST_TOKEN_CONTAINS_DIGIT", Features.ContainsDigit.last(tokens));
+			featureVector.set(entityTypePrefix + "ALL_TOKENS_CONTAIN_DIGIT", Features.ContainsDigit.all(tokens));
+			featureVector.set(entityTypePrefix + "AT_LEAST_ONE_TOKEN_CONTAINS_DIGIT",
+					Features.ContainsDigit.any(tokens));
+			featureVector.set(entityTypePrefix + "FIRST_TOKEN_CONTAINS_DIGIT", Features.ContainsDigit.first(tokens));
+			featureVector.set(entityTypePrefix + "LAST_TOKEN_CONTAINS_DIGIT", Features.ContainsDigit.last(tokens));
 
-			featureVector.set(entityType + "AT_LEAST_ONE_TOKEN_CONTAINS_HYPHEN", Features.ContainsHyphen.any(tokens));
-			featureVector.set(entityType + "AT_LEAST_ONE_TOKEN_CONTAINS_PUNCTUATION",
+			featureVector.set(entityTypePrefix + "AT_LEAST_ONE_TOKEN_CONTAINS_HYPHEN",
+					Features.ContainsHyphen.any(tokens));
+			featureVector.set(entityTypePrefix + "AT_LEAST_ONE_TOKEN_CONTAINS_PUNCTUATION",
 					Features.ContainsPunctuation.any(tokens));
-			featureVector.set(entityType + "AT_LEAST_ONE_TOKEN_CONTAINS_GREEK_SYMBOL",
+			featureVector.set(entityTypePrefix + "AT_LEAST_ONE_TOKEN_CONTAINS_GREEK_SYMBOL",
 					Features.ContainsGreek.any(tokens));
 
 			/*
@@ -72,14 +74,18 @@ public class MorphologicalTemplate extends AbstractTemplate<State>implements Ser
 
 			int[] suffixLengths = { 2, 3 };
 			for (int i : suffixLengths) {
-				featureVector.set(entityType + "LAST_TOKEN_SUFFIX_" + i + "=" + suffix(last.getText(), i), 1.0);
-				featureVector.set(entityType + "FIRST_TOKEN_SUFFIX_" + i + "=" + suffix(first.getText(), i), 1.0);
+				featureVector.set(entityTypePrefix + "LAST_TOKEN_SUFFIX_" + i + "=" + suffix(last.getText(), i), 1.0);
+				featureVector.set(entityTypePrefix + "FIRST_TOKEN_SUFFIX_" + i + "=" + suffix(first.getText(), i), 1.0);
 			}
 
 			int[] prefixLengths = { 2, 3 };
 			for (int i : prefixLengths) {
-				featureVector.set(entityType + "LAST_TOKEN_PREFIX_" + i + "=" + prefix(last.getText(), i), 1.0);
-				featureVector.set(entityType + "FIRST_TOKEN_PREFIX_" + i + "=" + prefix(first.getText(), i), 1.0);
+				featureVector.set(entityTypePrefix + "LAST_TOKEN_PREFIX_" + i + "=" + prefix(last.getText(), i), 1.0);
+				featureVector.set(entityTypePrefix + "FIRST_TOKEN_PREFIX_" + i + "=" + prefix(first.getText(), i), 1.0);
+			}
+			for (int i = 0; i < tokens.size(); i++) {
+//				featureVector.set(entityTypePrefix + "TOKEN_@" + i + "=" + tokens.get(i).getText(), 1.0);
+				featureVector.set(entityTypePrefix + "CONTAINS_TOKEN=" + tokens.get(i).getText(), 1.0);
 			}
 
 			log.debug("%s: Features for entity %s (\"%s\"): %s", this.getClass().getSimpleName(), entity.getID(),

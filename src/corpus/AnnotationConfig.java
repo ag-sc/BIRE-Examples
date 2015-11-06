@@ -10,24 +10,28 @@ import variables.EntityType;
 
 public class AnnotationConfig implements Serializable {
 
-	private Map<String, EntityType> entityTypes = new HashMap<String, EntityType>();
+	private Map<String, EntityTypeDefinition> entityTypes = new HashMap<String, EntityTypeDefinition>();
 
-	public Collection<EntityType> getEntityTypes() {
-		return new ArrayList<EntityType>(entityTypes.values());
+	public Collection<EntityTypeDefinition> getEntityTypeDefinitions() {
+		return new ArrayList<EntityTypeDefinition>(entityTypes.values());
 	}
 
-	public void addEntityType(EntityType entityType) {
+	public void addEntityType(EntityTypeDefinition entityType) {
 		entityTypes.put(entityType.getName(), entityType);
 	}
 
-	public EntityType getEntityType(String type) {
+	public EntityTypeDefinition getEntityTypeDefinition(String type) {
 		return entityTypes.get(type);
+	}
+
+	public EntityTypeDefinition getEntityTypeDefinition(EntityType type) {
+		return entityTypes.get(type.getName());
 	}
 
 	@Override
 	public String toString() {
 		StringBuilder b = new StringBuilder();
-		for (EntityType entityType : entityTypes.values()) {
+		for (EntityTypeDefinition entityType : entityTypes.values()) {
 			b.append(entityType);
 			b.append("\n");
 		}

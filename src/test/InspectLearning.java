@@ -6,7 +6,7 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import corpus.AnnotatedDocument;
+import corpus.LabeledDocument;
 import corpus.AnnotationConfig;
 import corpus.BioNLPCorpus;
 import corpus.BioNLPLoader;
@@ -37,11 +37,11 @@ public class InspectLearning {
 	private static Logger log = LogManager.getFormatterLogger(InspectLearning.class.getName());
 
 	public static void main(String[] args) {
-		Corpus<? extends AnnotatedDocument<State, State>> corpus = null;
+		Corpus<? extends LabeledDocument<State, State>> corpus = null;
 		AnnotationConfig config = null;
 		switch (1) {
 		case 0:
-			DefaultCorpus<AnnotatedDocument<State, State>> dummyCorpus = DummyData.getDummyData();
+			DefaultCorpus<LabeledDocument<State, State>> dummyCorpus = DummyData.getDummyData();
 			config = dummyCorpus.getCorpusConfig();
 			corpus = dummyCorpus;
 			break;
@@ -54,7 +54,7 @@ public class InspectLearning {
 		}
 
 		log.debug("Corpus:\n%s", corpus);
-		List<? extends AnnotatedDocument<State, State>> documents = corpus.getDocuments().subList(0, 1);
+		List<? extends LabeledDocument<State, State>> documents = corpus.getDocuments().subList(0, 1);
 
 		List<AbstractTemplate<State>> templates = new ArrayList<>();
 		templates.add(new RelationTemplate());
@@ -70,7 +70,7 @@ public class InspectLearning {
 		List<Explorer<State>> explorers = new ArrayList<>();
 		explorers.add(new ExhaustiveEntityExplorer(config));
 		explorers.add(new ExhaustiveBoundaryExplorer());
-		explorers.add(new RelationExplorer(20));
+		explorers.add(new RelationExplorer(20, config));
 		DefaultSampler<State, State, State> sampler = new DefaultSampler<>(model, scorer, objective, initializer,
 				explorers);
 

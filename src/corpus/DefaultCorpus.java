@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import corpus.AnnotatedDocument;
+import corpus.LabeledDocument;
 import corpus.Corpus;
 
-public class DefaultCorpus<DocumentT extends AnnotatedDocument<?, ?>> implements Corpus<DocumentT> {
+public class DefaultCorpus<DocumentT extends LabeledDocument<?, ?>> implements Corpus<DocumentT> {
 
 	private List<DocumentT> documents = new ArrayList<>();
 	private AnnotationConfig corpusConfig;
@@ -37,12 +37,12 @@ public class DefaultCorpus<DocumentT extends AnnotatedDocument<?, ?>> implements
 
 	@Override
 	public String toString() {
-		return "BratCorpus [corpusConfig=" + corpusConfig + ", #documents=" + documents.size() + "]";
+		return "DefaultCorpus [corpusConfig=" + corpusConfig + ", #documents=" + documents.size() + "]";
 	}
 
 	public String toDetailedString() {
 		StringBuilder builder = new StringBuilder();
-		for (AnnotatedDocument<?, ?> doc : documents) {
+		for (LabeledDocument<?, ?> doc : documents) {
 			builder.append(doc.getName());
 			builder.append("\n\t");
 			builder.append(doc.getContent());
@@ -52,7 +52,7 @@ public class DefaultCorpus<DocumentT extends AnnotatedDocument<?, ?>> implements
 			builder.append(doc.getGoldResult());
 			builder.append("\n");
 		}
-		return "BratCorpus [corpusConfig=" + corpusConfig + ", #documents=" + documents.size() + ", documents=\n"
+		return "DefaultCorpus [corpusConfig=" + corpusConfig + ", #documents=" + documents.size() + ", documents=\n"
 				+ builder.toString() + "]";
 	}
 

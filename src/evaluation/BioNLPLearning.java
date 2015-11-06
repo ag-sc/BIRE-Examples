@@ -12,7 +12,7 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import corpus.AnnotatedDocument;
+import corpus.LabeledDocument;
 import corpus.BioNLPCorpus;
 import corpus.BioNLPLoader;
 import corpus.SubDocument;
@@ -67,7 +67,7 @@ public class BioNLPLearning {
 		if (!outputDir.exists())
 			outputDir.mkdirs();
 
-		int numberOfSamplingSteps = 10;
+		int numberOfSamplingSteps = 15;
 		int numberOfEpochs = 1;
 		// N-Fold cross validation
 		int n = 1;
@@ -103,11 +103,12 @@ public class BioNLPLearning {
 
 			Scorer<State> scorer = new Scorer<>(model);
 
-			Initializer<State, State> initializer = new DefaultInitializer();
+			Initializer<State, State> initializer = new DefaultInitializer(true);
+
 			List<Explorer<State>> explorer = new ArrayList<>();
 			explorer.add(new ExhaustiveEntityExplorer(trainCorpus.getCorpusConfig()));
 			explorer.add(new ExhaustiveBoundaryExplorer());
-			explorer.add(new RelationExplorer(20));
+			explorer.add(new RelationExplorer(20, trainCorpus.getCorpusConfig()));
 			DefaultSampler<State, State, State> sampler = new DefaultSampler<>(model, scorer, objective, initializer,
 					explorer);
 
@@ -118,9 +119,6 @@ public class BioNLPLearning {
 			log.info("####################");
 			log.info("Start training");
 			trainer.train(sampler, learner, train, numberOfEpochs, numberOfSamplingSteps);
-			log.info("###############");
-			log.info("Trained Model:\n%s", model.toDetailedString());
-			log.info("###############");
 			try {
 				model.saveModelToFile(
 						new File(modelDir, EvaluationUtil.generateFilenameForModel(train.size())).getPath());
@@ -130,6 +128,10 @@ public class BioNLPLearning {
 				e.printStackTrace();
 			}
 			predictions = trainer.test(sampler, test, numberOfSamplingSteps);
+			log.info("###############");
+			log.info("Trained Model Weights:");
+			EvaluationUtil.printWeights(model, -1);
+			log.info("###############");
 			Set<File> files = BioNLPEvaluation.statesToBioNLPFiles(outputDir, predictions, true);
 			log.info("Produced annotaion files: %s", files);
 
@@ -146,7 +148,7 @@ public class BioNLPLearning {
 		}
 		BetterObjectiveFunction o = new BetterObjectiveFunction();
 		for (State state : predictions) {
-			State goldState = ((AnnotatedDocument<State, State>) state.getDocument()).getGoldResult();
+			State goldState = ((LabeledDocument<State, State>) state.getDocument()).getGoldResult();
 			double s = o.score(state, goldState);
 			// if (s < 0.9) {
 			// log.info("Gold: : %s", goldState);

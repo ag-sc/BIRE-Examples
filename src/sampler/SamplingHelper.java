@@ -13,6 +13,8 @@ import org.apache.logging.log4j.Logger;
 import com.google.common.collect.Multimap;
 
 import changes.StateChange;
+import corpus.AnnotationConfig;
+import corpus.EntityTypeDefinition;
 import utility.VariableID;
 import variables.ArgumentRole;
 import variables.EntityAnnotation;
@@ -85,15 +87,17 @@ public class SamplingHelper {
 	 * 
 	 * @param entity
 	 * @param state
+	 * @param corpusConfig
 	 */
-	public static void addRandomArgument(EntityAnnotation entity, State state) {
+	public static void addRandomArgument(EntityAnnotation entity, State state, AnnotationConfig corpusConfig) {
 		// get all possible argument targets
 		List<EntityAnnotation> entities = new ArrayList<>(state.getEntities());
 		entities.remove(entity);
 		if (!entities.isEmpty()) {
 			List<ArgumentRole> unassignedRoles = new ArrayList<>();
-			unassignedRoles.addAll(entity.getType().getCoreArguments().keySet());
-			unassignedRoles.addAll(entity.getType().getOptionalArguments().keySet());
+			EntityTypeDefinition entityTypeDefinition = corpusConfig.getEntityTypeDefinition(entity.getType());
+			unassignedRoles.addAll(entityTypeDefinition.getCoreArguments().keySet());
+			unassignedRoles.addAll(entityTypeDefinition.getOptionalArguments().keySet());
 			// remove already assigned roles
 			unassignedRoles.removeAll(entity.getReadOnlyArguments().keySet());
 
@@ -238,10 +242,11 @@ public class SamplingHelper {
 		return getBest(states, n);
 	}
 
-	public static void changeRandomArgumentRole(EntityAnnotation entity, State state) {
+	public static void changeRandomArgumentRole(EntityAnnotation entity, State state, AnnotationConfig corpusConfig) {
 		List<ArgumentRole> possibleNewRoles = new ArrayList<>();
-		possibleNewRoles.addAll(entity.getType().getCoreArguments().keySet());
-		possibleNewRoles.addAll(entity.getType().getOptionalArguments().keySet());
+		EntityTypeDefinition type = corpusConfig.getEntityTypeDefinition(entity.getType());
+		possibleNewRoles.addAll(type.getCoreArguments().keySet());
+		possibleNewRoles.addAll(type.getOptionalArguments().keySet());
 
 		List<Entry<ArgumentRole, VariableID>> arguments = new ArrayList<>(entity.getReadOnlyArguments().entries());
 		if (!arguments.isEmpty()) {
@@ -268,7 +273,7 @@ public class SamplingHelper {
 		}
 	}
 
-	public static void changeRandomArgumentEntity(EntityAnnotation entity, State state) {
+	public static void changeRandomArgumentEntity(EntityAnnotation entity, State state, AnnotationConfig corpusConfig) {
 		List<Entry<ArgumentRole, VariableID>> arguments = new ArrayList<>(entity.getReadOnlyArguments().entries());
 		if (!arguments.isEmpty()) {
 			// select random existing argument by role

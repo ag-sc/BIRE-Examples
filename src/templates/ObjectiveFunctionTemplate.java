@@ -7,7 +7,7 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import corpus.AnnotatedDocument;
+import corpus.LabeledDocument;
 import factors.AbstractFactor;
 import factors.impl.UnorderedVariablesFactor;
 import learning.ObjectiveFunction;
@@ -28,8 +28,8 @@ public class ObjectiveFunctionTemplate extends AbstractTemplate<State>implements
 	@Override
 	public void computeFactor(State state, AbstractFactor factor) {
 		Vector featureVector = new Vector();
-		if (state.getDocument() instanceof AnnotatedDocument) {
-			State goldState = ((AnnotatedDocument<State, State>) state.getDocument()).getGoldResult();
+		if (state.getDocument() instanceof LabeledDocument) {
+			State goldState = ((LabeledDocument<State, State>) state.getDocument()).getGoldResult();
 			double score = objective.score(state, goldState);
 			featureVector.set(GOLD, score);
 

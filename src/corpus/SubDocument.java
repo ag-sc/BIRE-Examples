@@ -2,12 +2,12 @@ package corpus;
 
 import java.util.List;
 
-import corpus.AnnotatedDocument;
+import corpus.LabeledDocument;
 import corpus.Corpus;
 import corpus.Token;
 import variables.State;
 
-public class SubDocument extends AnnotatedDocument<State, State> {
+public class SubDocument extends LabeledDocument<State, State> {
 	protected String parentDocumentName;
 
 	protected int offset = 0;
@@ -30,6 +30,6 @@ public class SubDocument extends AnnotatedDocument<State, State> {
 	@Override
 	public String toString() {
 		return "SubDocument [parentDocumentName=" + parentDocumentName + ", name=" + name + ", offset=" + offset
-				+ ", content=" + content + ", tokens=" + tokens + ", goldQuery=" + goldQuery + "]";
+				+ ", content=" + content + ", tokens=" + tokens + ", goldQuery=" + goldResult + "]";
 	}
 }

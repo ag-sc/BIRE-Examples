@@ -8,7 +8,7 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import corpus.AnnotatedDocument;
+import corpus.LabeledDocument;
 import corpus.BioNLPLoader;
 import corpus.Corpus;
 import evaluation.EvaluationUtil;
@@ -28,7 +28,7 @@ public class InspectTemplates {
 	private static Logger log = LogManager.getFormatterLogger(InspectTemplates.class.getName());
 
 	public static void main(String[] args) {
-		Corpus<? extends AnnotatedDocument<State, State>> corpus = null;
+		Corpus<? extends LabeledDocument<State, State>> corpus = null;
 
 		switch (1) {
 		case 0:
@@ -40,7 +40,7 @@ public class InspectTemplates {
 		default:
 			break;
 		}
-		AnnotatedDocument<State, State> doc = corpus.getDocuments().get(2);
+		LabeledDocument<State, State> doc = corpus.getDocuments().get(2);
 		log.debug("Content: %s (%s)", doc.getContent(), doc.getContent().length());
 		log.debug("Tokens: %s", doc.getTokens());
 		log.debug("State: %s", doc.getGoldResult());
