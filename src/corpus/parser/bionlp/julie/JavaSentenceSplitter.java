@@ -13,7 +13,7 @@ import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import corpus.parser.FileUtils;
+import corpus.FileUtils;
 import corpus.parser.bionlp.BratAnnotatedDocument;
 import corpus.parser.bionlp.annotations.BratAnnotation;
 import corpus.parser.bionlp.annotations.BratTextBoundAnnotation;

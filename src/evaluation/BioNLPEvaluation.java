@@ -14,9 +14,9 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import corpus.FileUtils;
 import corpus.SubDocument;
 import corpus.Token;
-import corpus.parser.FileUtils;
 import utility.VariableID;
 import variables.ArgumentRole;
 import variables.EntityAnnotation;
@@ -33,12 +33,34 @@ public class BioNLPEvaluation {
 		return e.getReadOnlyArguments().size() > 0;
 	}
 
-	private static String convertToEntityID(String rawID) {
-		return "T-" + rawID;
+	private static String convertToEntityID(EntityAnnotation entity) {
+		if (entity.isPriorKnowledge()) {
+			/*
+			 * use original IDs for prior knowledge
+			 */
+			return entity.getID().id;
+		} else {
+			/*
+			 * prepend "T" for generated enitities so that scripts recognize
+			 * this as a TextBound annotation.
+			 */
+			return "T-" + entity.getID().id;
+		}
 	}
 
-	private static String convertToEventID(String rawID) {
-		return "E-" + rawID;
+	private static String convertToEventID(EntityAnnotation entity) {
+		if (entity.isPriorKnowledge()) {
+			/*
+			 * use original IDs for prior knowledge
+			 */
+			return entity.getID().id;
+		} else {
+			/*
+			 * prepend "E" for generated events so that scripts recognize this
+			 * as a Event annotation annotation.
+			 */
+			return "E-" + entity.getID().id;
+		}
 	}
 
 	public static String stateToBioNLPString(State state) {
@@ -59,8 +81,7 @@ public class BioNLPEvaluation {
 		SubDocument doc = (SubDocument) e.getState().getDocument();
 		List<Token> tokens = e.getTokens();
 		String pattern = "%s\t%s %s %s\t%s";
-		String rawID = e.getID().id;
-		String convertedID = convertToEntityID(rawID);
+		String convertedID = convertToEntityID(e);
 		String type = e.getType().getName();
 		String text = e.getText();
 		int from = doc.getOffset() + tokens.get(0).getFrom();
@@ -74,55 +95,49 @@ public class BioNLPEvaluation {
 		String triggerPattern = "%s\t%s %s %s\t%s";
 		String eventPattern = "%s\t%s:%s";
 		String argumentPattern = " %s:%s";
-		String rawID = e.getID().id;
-		String convertedID = convertToEventID(rawID);
+		String convertedID = convertToEventID(e);
 
 		String type = e.getType().getName();
 		String text = e.getText();
 		int from = doc.getOffset() + tokens.get(0).getFrom();
 		int to = doc.getOffset() + tokens.get(tokens.size() - 1).getTo();
-		String triggerID = convertToEntityID(rawID);
+		String triggerID = convertToEntityID(e);
 
+		/*
+		 * extract trigger part of this entity
+		 */
 		String trigger = String.format(triggerPattern, triggerID, type, from, to, text);
+		/*
+		 * extract event part of this entity
+		 */
 		String event = String.format(eventPattern, convertedID, type, triggerID);
 
 		for (Entry<ArgumentRole, VariableID> arg : e.getReadOnlyArguments().entries()) {
 			EntityAnnotation argEntity = e.getEntity(arg.getValue());
 			String convertedArgID = null;
 			if (isEvent(argEntity)) {
-				convertedArgID = convertToEventID(arg.getValue().id);
+				convertedArgID = convertToEventID(argEntity);
 			} else {
-				convertedArgID = convertToEntityID(arg.getValue().id);
+				convertedArgID = convertToEntityID(argEntity);
 			}
 			event += String.format(argumentPattern, arg.getKey().role, convertedArgID);
 		}
 		return trigger + "\n" + event;
 	}
 
-	// /**
-	// * Writes the given states to files that resemble the BioNLP annotation
-	// * format. States the belong to the same original documents (that is,
-	// which
-	// * relate to sentences in the same document) are written to the same
-	// * annotation file. If the wipeFolder flag is set to true, the user is
-	// * prompted for confirmation and the contents of the outputDir folder are
-	// * deleted before writing the state files.
-	// *
-	// * @param outputDir
-	// * @param states
-	// * @param wipeFolder
-	// */
+	/**
+	 * Writes the given states to files that resemble the BioNLP annotation
+	 * format. States the belong to the same original documents (that is, which
+	 * relate to sentences in the same document) are written to the same
+	 * annotation file. Inside the outputDir a new sub folder is created that is
+	 * named with the current time stamp. The serialized files are stored in
+	 * this sub folder.
+	 *
+	 * @param outputDir
+	 * @param states
+	 * @param wipeFolder
+	 */
 	public static Set<File> statesToBioNLPFiles(File outputDir, List<State> states, boolean wipeFolder) {
-		// if (wipeFolder) {
-		// // int userInput = JOptionPane.showConfirmDialog(null,
-		// // String.format("Really wipe folder \"%s\" before writing states?",
-		// // outputDir.getPath()));
-		// // if (userInput == JOptionPane.OK_OPTION) {
-		// for (File f : outputDir.listFiles()) {
-		// f.delete();
-		// }
-		// // }
-		// }
 		Map<String, File> files = new HashMap<>();
 		String newParentName = new SimpleDateFormat("yyyy-MM-dd hh-mm-ss").format(new Date());
 		File newParent = new File(outputDir, newParentName);

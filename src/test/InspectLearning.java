@@ -1,35 +1,26 @@
 package test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import corpus.LabeledDocument;
-import corpus.AnnotationConfig;
-import corpus.BioNLPCorpus;
-import corpus.BioNLPLoader;
-import corpus.Corpus;
-import corpus.DefaultCorpus;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+
+import corpus.Document;
+import corpus.Token;
 import learning.DefaultLearner;
 import learning.Learner;
 import learning.Model;
-import learning.ObjectiveFunction;
-import learning.Scorer;
-import learning.Trainer;
-import objective.DefaultObjectiveFunction;
-import sampler.DefaultInitializer;
-import sampler.ExhaustiveBoundaryExplorer;
-import sampler.ExhaustiveEntityExplorer;
-import sampler.RelationExplorer;
-import sampling.DefaultSampler;
-import sampling.Explorer;
-import sampling.Initializer;
 import templates.AbstractTemplate;
-import templates.ContextTemplate;
 import templates.MorphologicalTemplate;
-import templates.RelationTemplate;
+import utility.VariableID;
+import variables.ArgumentRole;
+import variables.EntityAnnotation;
+import variables.EntityType;
 import variables.State;
 
 public class InspectLearning {
@@ -37,47 +28,43 @@ public class InspectLearning {
 	private static Logger log = LogManager.getFormatterLogger(InspectLearning.class.getName());
 
 	public static void main(String[] args) {
-		Corpus<? extends LabeledDocument<State, State>> corpus = null;
-		AnnotationConfig config = null;
-		switch (1) {
-		case 0:
-			DefaultCorpus<LabeledDocument<State, State>> dummyCorpus = DummyData.getDummyData();
-			config = dummyCorpus.getCorpusConfig();
-			corpus = dummyCorpus;
-			break;
-		case 1:
-			BioNLPCorpus bioNLPCorpus = BioNLPLoader.loadBioNLP2013Train(false);
-			config = bioNLPCorpus.getCorpusConfig();
-			corpus = bioNLPCorpus;
-		default:
-			break;
-		}
 
-		log.debug("Corpus:\n%s", corpus);
-		List<? extends LabeledDocument<State, State>> documents = corpus.getDocuments().subList(0, 1);
-
+		MorphologicalTemplate template = new MorphologicalTemplate();
 		List<AbstractTemplate<State>> templates = new ArrayList<>();
-		templates.add(new RelationTemplate());
-		templates.add(new MorphologicalTemplate());
-		templates.add(new ContextTemplate());
+		templates.add(template);
 		Model<State> model = new Model<>(templates);
 
-		Scorer<State> scorer = new Scorer<>(model);
+		String content = "This is a test";
+		List<Token> tokens = Arrays.asList(new Token(0, 0, 4, "This"), new Token(1, 5, 7, "is"),
+				new Token(2, 8, 9, "a"), new Token(3, 10, 14, "test"));
+		Document<State> doc = new Document<>("test", content, tokens);
+		State s1 = new State(doc);
+		EntityAnnotation e1 = new EntityAnnotation(s1, "E1", new EntityType("Banana"), 0, 1);
+		EntityAnnotation e2 = new EntityAnnotation(s1, "E2", new EntityType("Apple"), 2, 3);
+		EntityAnnotation e3 = new EntityAnnotation(s1, "E3", new EntityType("Pear"), 3, 4);
+		s1.addEntity(e1);
+		s1.addEntity(e2);
+		s1.setObjectiveScore(0.5);
 
-		ObjectiveFunction<State, State> objective = new DefaultObjectiveFunction();
+		State s2 = new State(doc);
+		s2.addEntity(e2);
+		s2.addEntity(e3);
+		s2.setObjectiveScore(0.8);
 
-		Initializer<State, State> initializer = new DefaultInitializer();
-		List<Explorer<State>> explorers = new ArrayList<>();
-		explorers.add(new ExhaustiveEntityExplorer(config));
-		explorers.add(new ExhaustiveBoundaryExplorer());
-		explorers.add(new RelationExplorer(20, config));
-		DefaultSampler<State, State, State> sampler = new DefaultSampler<>(model, scorer, objective, initializer,
-				explorers);
+		log.debug("S1: %s", s1);
+		log.debug("S2: %s", s2);
 
-		Trainer<State> trainer = new Trainer<>(model, scorer);
+		template.applyTo(s1, true);
+		template.applyTo(s2, true);
 
-		Learner<State> learner = new DefaultLearner<>(model, scorer, 0.1);
+		log.debug("Factors S1: %s", s1.getFactorGraph().getFactors());
+		log.debug("Factors S2: %s", s2.getFactorGraph().getFactors());
 
-		trainer.train(sampler, learner, documents, 1, 10);
+		log.debug("Model: %s", model.toDetailedString());
+		Learner<State> learner = new DefaultLearner<>(model, 1);
+		learner.update(s1, s2);
+
+		log.debug("Model: %s", model.toDetailedString());
 	}
+
 }

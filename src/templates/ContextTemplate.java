@@ -66,10 +66,10 @@ public class ContextTemplate extends AbstractTemplate<State>implements Serializa
 		}
 	}
 
-//	@Override
-//	protected boolean isRelevantChange(StateChange value) {
-//		return relevantChanges.contains(value);
-//	}
+	// @Override
+	// protected boolean isRelevantChange(StateChange value) {
+	// return relevantChanges.contains(value);
+	// }
 
 	@Override
 	protected Set<AbstractFactor> generateFactors(State state) {

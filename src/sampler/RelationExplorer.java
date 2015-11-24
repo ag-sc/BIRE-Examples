@@ -32,7 +32,7 @@ public class RelationExplorer implements Explorer<State> {
 
 			// pick one entity at random
 			EntityAnnotation sampledEntity = SamplingHelper
-					.getRandomElement(new ArrayList<>(generatedState.getNonFixedEntities()));
+					.getRandomElement(new ArrayList<>(generatedState.getEditableEntities()));
 			// if annotation exists
 			if (sampledEntity != null) {
 				// choose a way to alter the state

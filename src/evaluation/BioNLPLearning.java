@@ -12,16 +12,16 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import corpus.LabeledDocument;
 import corpus.BioNLPCorpus;
 import corpus.BioNLPLoader;
+import corpus.LabeledDocument;
 import corpus.SubDocument;
 import learning.DefaultLearner;
 import learning.Model;
 import learning.ObjectiveFunction;
 import learning.Scorer;
 import learning.Trainer;
-import objective.BetterObjectiveFunction;
+import objective.DefaultObjectiveFunction;
 import sampler.DefaultInitializer;
 import sampler.ExhaustiveBoundaryExplorer;
 import sampler.ExhaustiveEntityExplorer;
@@ -41,8 +41,8 @@ public class BioNLPLearning {
 	public static void main(String[] args) {
 		// int trainSize = 190;
 
-		int trainSize = 1;
-		int testSize = 1;
+		int trainSize = 2;
+		int testSize = 2;
 		if (args != null && args.length == 2) {
 			trainSize = Integer.parseInt(args[0]);
 			testSize = Integer.parseInt(args[1]);
@@ -93,7 +93,7 @@ public class BioNLPLearning {
 			}
 			log.info("Train/test: => #train: %s, #test: %s", train.size(), test.size());
 
-			ObjectiveFunction<State, State> objective = new BetterObjectiveFunction();
+			ObjectiveFunction<State, State> objective = new DefaultObjectiveFunction();
 			List<AbstractTemplate<State>> templates = new ArrayList<>();
 			templates.add(new RelationTemplate());
 			templates.add(new MorphologicalTemplate());
@@ -103,22 +103,21 @@ public class BioNLPLearning {
 
 			Scorer<State> scorer = new Scorer<>(model);
 
-			Initializer<State, State> initializer = new DefaultInitializer(true);
+			Initializer<SubDocument, State> initializer = new DefaultInitializer<>(false);
 
-			List<Explorer<State>> explorer = new ArrayList<>();
-			explorer.add(new ExhaustiveEntityExplorer(trainCorpus.getCorpusConfig()));
-			explorer.add(new ExhaustiveBoundaryExplorer());
-			explorer.add(new RelationExplorer(20, trainCorpus.getCorpusConfig()));
-			DefaultSampler<State, State, State> sampler = new DefaultSampler<>(model, scorer, objective, initializer,
-					explorer);
+			List<Explorer<State>> explorers = new ArrayList<>();
+			explorers.add(new ExhaustiveEntityExplorer(trainCorpus.getCorpusConfig()));
+			explorers.add(new ExhaustiveBoundaryExplorer(true, true));
+			explorers.add(new RelationExplorer(20, trainCorpus.getCorpusConfig()));
+			DefaultSampler<State, State> sampler = new DefaultSampler<>(model, scorer, objective, explorers,
+					numberOfSamplingSteps);
 
-			Trainer<State> trainer = new Trainer<>(model, scorer);
-
-			DefaultLearner<State> learner = new DefaultLearner<>(model, scorer, 1);
+			Trainer trainer = new Trainer();
+			DefaultLearner<State> learner = new DefaultLearner<>(model, 1);
 
 			log.info("####################");
 			log.info("Start training");
-			trainer.train(sampler, learner, train, numberOfEpochs, numberOfSamplingSteps);
+			trainer.train(sampler, initializer, learner, train, numberOfEpochs);
 			try {
 				model.saveModelToFile(
 						new File(modelDir, EvaluationUtil.generateFilenameForModel(train.size())).getPath());
@@ -127,7 +126,8 @@ public class BioNLPLearning {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			predictions = trainer.test(sampler, test, numberOfSamplingSteps);
+			// TODO use test here
+			predictions = trainer.test(sampler, initializer, train);
 			log.info("###############");
 			log.info("Trained Model Weights:");
 			EvaluationUtil.printWeights(model, -1);
@@ -146,7 +146,7 @@ public class BioNLPLearning {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		BetterObjectiveFunction o = new BetterObjectiveFunction();
+		ObjectiveFunction<State, State> o = new DefaultObjectiveFunction();
 		for (State state : predictions) {
 			State goldState = ((LabeledDocument<State, State>) state.getDocument()).getGoldResult();
 			double s = o.score(state, goldState);

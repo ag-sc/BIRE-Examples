@@ -2,9 +2,6 @@ package corpus;
 
 import java.util.List;
 
-import corpus.LabeledDocument;
-import corpus.Corpus;
-import corpus.Token;
 import variables.State;
 
 public class SubDocument extends LabeledDocument<State, State> {

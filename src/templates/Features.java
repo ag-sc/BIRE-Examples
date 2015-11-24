@@ -6,6 +6,12 @@ import corpus.Token;
 import variables.EntityAnnotation;
 import variables.State;
 
+/**
+ * Convenience class for the computation of Features for the BioNLP task.
+ * 
+ * @author sjebbara
+ *
+ */
 public class Features {
 
 	public static final String PUNCTUATION = "!\"#$%&'\\(\\)\\*\\+,-\\./:;<=>\\?@\\[\\]\\^_`{\\|}~";

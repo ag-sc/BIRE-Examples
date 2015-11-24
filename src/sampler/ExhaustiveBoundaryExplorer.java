@@ -9,9 +9,12 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.google.common.collect.HashMultimap;
+
 import evaluation.AnnotationUtils;
 import sampling.Explorer;
 import utility.VariableID;
+import variables.ArgumentRole;
 import variables.EntityAnnotation;
 import variables.State;
 
@@ -19,7 +22,18 @@ public class ExhaustiveBoundaryExplorer implements Explorer<State> {
 
 	private static Logger log = LogManager.getFormatterLogger(ExhaustiveBoundaryExplorer.class.getName());
 
-	private boolean mergeNeighbors = false;
+	private boolean mergeNeighbors;
+	private boolean noOverlaps;
+
+	public ExhaustiveBoundaryExplorer() {
+		this.mergeNeighbors = false;
+		this.noOverlaps = false;
+	}
+
+	public ExhaustiveBoundaryExplorer(boolean mergeNeighbors, boolean noOverlaps) {
+		this.mergeNeighbors = mergeNeighbors;
+		this.noOverlaps = noOverlaps;
+	}
 
 	public List<State> getNextStates(State previousState) {
 		List<State> generatedStates = new ArrayList<>();
@@ -34,24 +48,28 @@ public class ExhaustiveBoundaryExplorer implements Explorer<State> {
 
 	private List<State> generateStatesForBoundaries(State previousState) {
 		List<State> generatedStates = new ArrayList<State>();
-		Set<VariableID> entities = previousState.getNonFixedEntityIDs();
+		Set<VariableID> entities = previousState.getEditableEntityIDs();
 		for (VariableID entityID : entities) {
 			EntityAnnotation previousStatesEntity = previousState.getEntity(entityID);
 			int from = previousStatesEntity.getBeginTokenIndex();
 			int to = previousStatesEntity.getEndTokenIndex();
 			if (0 < from) {
-				// Expand left
-				State generatedState = new State(previousState);
-				EntityAnnotation entity = generatedState.getEntity(entityID);
-				entity.setBeginTokenIndex(from - 1);
-				generatedStates.add(generatedState);
+				if (!noOverlaps || !previousState.tokenHasAnnotation(from - 1)) {
+					// Expand left
+					State generatedState = new State(previousState);
+					EntityAnnotation entity = generatedState.getEntity(entityID);
+					entity.setBeginTokenIndex(from - 1);
+					generatedStates.add(generatedState);
+				}
 			}
-			if (to < previousStatesEntity.getState().getDocument().getTokens().size()) {
-				// Expand right
-				State generatedState = new State(previousState);
-				EntityAnnotation entity = generatedState.getEntity(entityID);
-				entity.setEndTokenIndex(to + 1);
-				generatedStates.add(generatedState);
+			if (to < previousState.getDocument().getTokens().size()) {
+				if (!noOverlaps || !previousState.tokenHasAnnotation(to + 1)) {
+					// Expand right
+					State generatedState = new State(previousState);
+					EntityAnnotation entity = generatedState.getEntity(entityID);
+					entity.setEndTokenIndex(to + 1);
+					generatedStates.add(generatedState);
+				}
 			}
 			if (to - from > 1) {
 				/**
@@ -60,18 +78,22 @@ public class ExhaustiveBoundaryExplorer implements Explorer<State> {
 				 * these conditions are implied in this if-block
 				 */
 				{
-					// Contract left
-					State generatedState = new State(previousState);
-					EntityAnnotation entity = generatedState.getEntity(entityID);
-					entity.setBeginTokenIndex(from + 1);
-					generatedStates.add(generatedState);
+					if (!noOverlaps || !previousState.tokenHasAnnotation(from + 1)) {
+						// Contract left
+						State generatedState = new State(previousState);
+						EntityAnnotation entity = generatedState.getEntity(entityID);
+						entity.setBeginTokenIndex(from + 1);
+						generatedStates.add(generatedState);
+					}
 				}
 				{
-					// Contract right
-					State generatedState = new State(previousState);
-					EntityAnnotation entity = generatedState.getEntity(entityID);
-					entity.setEndTokenIndex(to - 1);
-					generatedStates.add(generatedState);
+					if (!noOverlaps || !previousState.tokenHasAnnotation(to - 1)) {
+						// Contract right
+						State generatedState = new State(previousState);
+						EntityAnnotation entity = generatedState.getEntity(entityID);
+						entity.setEndTokenIndex(to - 1);
+						generatedStates.add(generatedState);
+					}
 				}
 			}
 		}
@@ -83,7 +105,7 @@ public class ExhaustiveBoundaryExplorer implements Explorer<State> {
 
 	private List<State> generateStatesForNeighbors(State previousState) {
 		List<State> generatedStates = new ArrayList<State>();
-		Set<VariableID> previousStatesEntityIDs = previousState.getNonFixedEntityIDs();
+		Set<VariableID> previousStatesEntityIDs = previousState.getEditableEntityIDs();
 		// avoid duplicate merges by tracking all merged variable pairs
 		Set<MergedVariablePair> mergedVariablePairs = new HashSet<>();
 		for (VariableID entityID1 : previousStatesEntityIDs) {
@@ -95,13 +117,16 @@ public class ExhaustiveBoundaryExplorer implements Explorer<State> {
 					State generatedState = new State(previousState);
 					generatedState.removeEntity(entityID1);
 					generatedState.removeEntity(entityID2);
-					EntityAnnotation mergedEntity = new EntityAnnotation(generatedState, previousStatesEntity1);
-					generatedState.addEntity(mergedEntity);
-					mergedEntity.setBeginTokenIndex(Math.min(previousStatesEntity1.getBeginTokenIndex(),
-							previousStatesEntity2.getBeginTokenIndex()));
+					int beginIndex = Math.min(previousStatesEntity1.getBeginTokenIndex(),
+							previousStatesEntity2.getBeginTokenIndex());
+					int endIndex = Math.max(previousStatesEntity1.getEndTokenIndex(),
+							previousStatesEntity2.getEndTokenIndex());
+					HashMultimap<ArgumentRole, VariableID> arguments = HashMultimap
+							.create(previousStatesEntity1.getReadOnlyArguments());
 
-					mergedEntity.setEndTokenIndex(Math.max(previousStatesEntity1.getEndTokenIndex(),
-							previousStatesEntity2.getEndTokenIndex()));
+					EntityAnnotation mergedEntity = new EntityAnnotation(generatedState,
+							previousStatesEntity1.getType(), arguments, beginIndex, endIndex);
+					generatedState.addEntity(mergedEntity);
 					generatedStates.add(generatedState);
 					mergedVariablePairs.add(new MergedVariablePair(entityID1, entityID2));
 				}
@@ -131,9 +156,6 @@ public class ExhaustiveBoundaryExplorer implements Explorer<State> {
 			return false;
 		}
 		if (!AnnotationUtils.matchArguments(entity1, entity2)) {
-			System.out.println(entity1);
-			System.out.println(entity2);
-			System.out.println("DAMN");
 			return false;
 		}
 		return true;

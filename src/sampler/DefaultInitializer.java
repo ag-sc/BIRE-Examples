@@ -4,11 +4,12 @@ import corpus.Document;
 import sampling.Initializer;
 import variables.State;
 
-public class DefaultInitializer implements Initializer<State, State> {
+public class DefaultInitializer<DocumentT extends Document<State>> implements Initializer<DocumentT, State> {
 
-	private boolean usePriorKnowledge = false;
+	private boolean usePriorKnowledge;
 
 	public DefaultInitializer() {
+		this.usePriorKnowledge = false;
 	}
 
 	public DefaultInitializer(boolean usePriorKnowledge) {
@@ -16,7 +17,7 @@ public class DefaultInitializer implements Initializer<State, State> {
 	}
 
 	@Override
-	public State getInitialState(Document<State> document) {
+	public State getInitialState(DocumentT document) {
 		if (usePriorKnowledge) {
 			State priorKnowledge = document.getPriorKnowledge();
 			return new State(priorKnowledge);

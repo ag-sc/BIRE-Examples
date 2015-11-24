@@ -10,10 +10,21 @@ import org.apache.logging.log4j.Logger;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
+import corpus.AnnotationConfig;
+import corpus.BioNLPCorpus;
+import corpus.BioNLPLoader;
+import corpus.Corpus;
+import corpus.DefaultCorpus;
 import corpus.Document;
+import corpus.LabeledDocument;
 import corpus.Token;
+import objective.DefaultObjectiveFunction;
+import sampler.DefaultInitializer;
 import sampler.ExhaustiveBoundaryExplorer;
+import sampler.ExhaustiveEntityExplorer;
+import sampler.RelationExplorer;
 import sampling.Explorer;
+import sampling.Initializer;
 import utility.VariableID;
 import variables.ArgumentRole;
 import variables.EntityAnnotation;
@@ -25,47 +36,44 @@ public class InspectExplorers {
 	private static Logger log = LogManager.getFormatterLogger(InspectExplorers.class.getName());
 
 	public static void main(String[] args) {
-		testMerge();
-		// Corpus<? extends AnnotatedDocument<State, State>> corpus = null;
-		// AnnotationConfig corpusConfig = null;
-		//
-		// switch (1) {
-		// case 0:
-		// DefaultCorpus<? extends AnnotatedDocument<State, State>> c1 =
-		// DummyData.getDummyData();
-		// corpusConfig = c1.getCorpusConfig();
-		// corpus = c1;
-		// break;
-		// case 1:
-		// BioNLPCorpus c2 = BioNLPLoader.loadBioNLP2013Train(false);
-		// corpusConfig = c2.getCorpusConfig();
-		// corpus = c2;
-		// break;
-		// default:
-		// break;
-		// }
-		// AnnotatedDocument<State, State> doc = corpus.getDocuments().get(0);
-		// log.debug("Content: %s (%s)", doc.getContent(),
-		// doc.getContent().length());
-		// log.debug("Tokens: %s", doc.getTokens());
-		// log.debug("State: %s", doc.getGoldResult());
-		//
-		// Initializer<State, State> initializer = new DefaultInitializer();
-		// List<Explorer<State>> explorers = new ArrayList<>();
-		// explorers.add(new ExhaustiveEntityExplorer(corpusConfig));
-		// explorers.add(new ExhaustiveBoundaryExplorer());
-		// explorers.add(new RelationExplorer(10));
-		//
-		//
-		// State init = doc.getPriorKnowledge();
-		// log.debug("################################");
-		// log.debug("%s", init);
-		// State gold = doc.getGoldResult();
-		// log.debug("%s", gold);
-		// log.debug("################################");
-		//
-		// State state = initializer.getInitialState(doc);
-		// applyExplorersToState(explorers, state, false);
+		// testMerge();
+		Corpus<? extends LabeledDocument<State, State>> corpus = null;
+		AnnotationConfig corpusConfig = null;
+
+		switch (1) {
+		case 0:
+			DefaultCorpus<? extends LabeledDocument<State, State>> c1 = DummyData.getDummyData();
+			corpusConfig = c1.getCorpusConfig();
+			corpus = c1;
+			break;
+		case 1:
+			BioNLPCorpus c2 = BioNLPLoader.loadBioNLP2013Train(false);
+			corpusConfig = c2.getCorpusConfig();
+			corpus = c2;
+			break;
+		default:
+			break;
+		}
+		LabeledDocument<State, State> doc = corpus.getDocuments().get(0);
+		log.debug("Content: %s (%s)", doc.getContent(), doc.getContent().length());
+		log.debug("Tokens: %s", doc.getTokens());
+		log.debug("State: %s", doc.getGoldResult());
+
+		Initializer<Document<State>, State> initializer = new DefaultInitializer(false);
+		List<Explorer<State>> explorers = new ArrayList<>();
+		explorers.add(new ExhaustiveEntityExplorer(corpusConfig));
+		explorers.add(new ExhaustiveBoundaryExplorer());
+		explorers.add(new RelationExplorer(10, corpusConfig));
+
+		State init = doc.getPriorKnowledge();
+		log.debug("################################");
+		log.debug("%s", init);
+		State gold = doc.getGoldResult();
+		log.debug("%s", gold);
+		log.debug("################################");
+
+		State state = initializer.getInitialState(doc);
+		applyExplorersToState(explorers, state, false);
 	}
 
 	private static void testMerge() {
@@ -96,13 +104,16 @@ public class InspectExplorers {
 	private static void applyExplorersToState(List<Explorer<State>> explorers, State state, boolean force) {
 		log.debug("All entities:   %s", state.getEntities());
 		log.debug("All entityIDs: %s", state.getEntityIDs());
-		log.debug("Non-fixed entities: %s", state.getNonFixedEntities());
-		log.debug("Non-fixed entityIDs: %s", state.getNonFixedEntityIDs());
+		log.debug("Non-fixed entities: %s", state.getEditableEntities());
+		log.debug("Non-fixed entityIDs: %s", state.getEditableEntityIDs());
+		DefaultObjectiveFunction objective = new DefaultObjectiveFunction();
 		for (Explorer<State> ex : explorers) {
 			log.debug("----- %s -----", ex.getClass().getSimpleName());
 			log.debug("INITIAL STATE: %s", state);
 			log.debug("------");
-			ex.getNextStates(state).forEach(s -> log.debug("%s", s));
+			List<State> states = ex.getNextStates(state);
+			states.forEach(s -> objective.score(s, ((LabeledDocument<State, State>) s.getDocument()).getGoldResult()));
+			states.forEach(s -> log.debug("%s", s));
 		}
 	}
 

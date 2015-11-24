@@ -9,8 +9,8 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import corpus.FileUtils;
 import corpus.Token;
-import corpus.parser.FileUtils;
 import de.julielab.jtbd.JTBDException;
 import de.julielab.jtbd.TokenizedSentence;
 import de.julielab.jtbd.Tokenizer;

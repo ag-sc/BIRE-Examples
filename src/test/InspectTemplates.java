@@ -2,19 +2,18 @@ package test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import corpus.LabeledDocument;
 import corpus.BioNLPLoader;
 import corpus.Corpus;
+import corpus.LabeledDocument;
 import evaluation.EvaluationUtil;
 import factors.AbstractFactor;
 import learning.Vector;
-import logging.Log;
 import templates.AbstractTemplate;
 import templates.ContextTemplate;
 import templates.MorphologicalTemplate;
@@ -40,7 +39,13 @@ public class InspectTemplates {
 		default:
 			break;
 		}
-		LabeledDocument<State, State> doc = corpus.getDocuments().get(2);
+		LabeledDocument<State, State> doc = null;
+		for (LabeledDocument<State, State> tmpDoc : corpus.getDocuments()) {
+			if (tmpDoc.getGoldResult().getEntities().size() > 0) {
+				doc = tmpDoc;
+				break;
+			}
+		}
 		log.debug("Content: %s (%s)", doc.getContent(), doc.getContent().length());
 		log.debug("Tokens: %s", doc.getTokens());
 		log.debug("State: %s", doc.getGoldResult());
@@ -63,13 +68,13 @@ public class InspectTemplates {
 	private static void applyTemplatesToState(List<AbstractTemplate<State>> templates, State state, boolean force) {
 		log.debug("All entities:   %s", state.getEntities());
 		log.debug("All entityIDs: %s", state.getEntityIDs());
-		log.debug("Non-fixed entities: %s", state.getNonFixedEntities());
-		log.debug("Non-fixed entityIDs: %s", state.getNonFixedEntityIDs());
+		log.debug("Non-fixed entities: %s", state.getEditableEntities());
+		log.debug("Non-fixed entityIDs: %s", state.getEditableEntityIDs());
 		for (AbstractTemplate<State> t : templates) {
 			t.applyTo(state, force);
 		}
 
-		Set<AbstractFactor> factors = state.getFactorGraph().getFactors();
+		Collection<AbstractFactor> factors = state.getFactorGraph().getFactors();
 		int i = 0;
 		for (AbstractFactor factor : factors) {
 			log.debug("\tFactor %s", factor);

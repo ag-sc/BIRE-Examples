@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import corpus.parser.FileUtils;
 import corpus.parser.bionlp.BioNLP2BIREConverter;
 import corpus.parser.bionlp.BratAnnotatedDocument;
 import corpus.parser.bionlp.BratAnnotationParser;
@@ -70,6 +69,7 @@ public class BioNLPLoader {
 			try {
 				return loadDatasetFromBinaries(serializationFilepath);
 			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
 		List<File> texts = FileUtils.getFiles(new File(dirpath), "txt");

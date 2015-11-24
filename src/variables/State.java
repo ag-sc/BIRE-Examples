@@ -78,12 +78,6 @@ public class State extends AbstractState implements Serializable {
 		this.document = document;
 	}
 
-	// @Override
-	// public State duplicate() {
-	// State cloned = new State(this);
-	// return cloned;
-	// }
-
 	public Document<State> getDocument() {
 		return document;
 	}
@@ -117,10 +111,23 @@ public class State extends AbstractState implements Serializable {
 		}
 	}
 
+	/**
+	 * Returns ALL entity IDs in this state. This includes entities marked as
+	 * fixed. Explorers should consider using the getNonFixedEntityIDs() method.
+	 * 
+	 * @return
+	 */
+
 	public Set<VariableID> getEntityIDs() {
 		return entities.keySet();
 	}
 
+	/**
+	 * Returns ALL entities in this state. This includes entities marked as
+	 * fixed. Explorers should consider using the getNonFixedEntities() method.
+	 * 
+	 * @return
+	 */
 	public Collection<EntityAnnotation> getEntities() {
 		return entities.values();
 	}
@@ -131,6 +138,11 @@ public class State extends AbstractState implements Serializable {
 
 	public boolean tokenHasAnnotation(Token token) {
 		Set<VariableID> entitiesForToken = tokenToEntities.get(token.getIndex());
+		return entitiesForToken != null && !entitiesForToken.isEmpty();
+	}
+
+	public boolean tokenHasAnnotation(int tokenIndex) {
+		Set<VariableID> entitiesForToken = tokenToEntities.get(tokenIndex);
 		return entitiesForToken != null && !entitiesForToken.isEmpty();
 	}
 
@@ -198,6 +210,29 @@ public class State extends AbstractState implements Serializable {
 		return tokenToEntities;
 	}
 
+	/**
+	 * Returns all those entities that are not marked as prior knowledge. This
+	 * function is especially useful for the explorers (since they should not
+	 * alter fixed variables).
+	 * 
+	 * @return
+	 */
+	public Collection<EntityAnnotation> getEditableEntities() {
+		return entities.values().stream().filter(e -> !e.isPriorKnowledge).collect(Collectors.toList());
+	}
+
+	/**
+	 * Returns all those entity IDs for which the entities are not marked as
+	 * prior knowledge. This function is especially useful for the explorers
+	 * (since they should not alter fixed variables).
+	 * 
+	 * @return
+	 */
+	public Set<VariableID> getEditableEntityIDs() {
+		return entities.values().stream().filter(e -> !e.isPriorKnowledge).map(e -> e.getID())
+				.collect(Collectors.toSet());
+	}
+
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("ID:");
@@ -263,13 +298,4 @@ public class State extends AbstractState implements Serializable {
 		}
 		return builder.toString().trim();
 	}
-
-	public Collection<EntityAnnotation> getNonFixedEntities() {
-		return entities.values().stream().filter(e -> !e.isFixed).collect(Collectors.toList());
-	}
-
-	public Set<VariableID> getNonFixedEntityIDs() {
-		return entities.values().stream().filter(e -> !e.isFixed).map(e -> e.getID()).collect(Collectors.toSet());
-	}
-
 }

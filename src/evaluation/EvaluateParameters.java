@@ -7,13 +7,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import corpus.LabeledDocument;
 import corpus.AnnotationConfig;
 import corpus.BioNLPCorpus;
 import corpus.BioNLPLoader;
 import corpus.Corpus;
 import corpus.DatasetConfig;
 import corpus.DefaultCorpus;
+import corpus.LabeledDocument;
 import corpus.parser.usage.UsageLoader;
 import learning.DefaultLearner;
 import learning.Learner;
@@ -128,8 +128,8 @@ public class EvaluateParameters {
 		alphaOmegaGridSearch(modelDir, evalDir, allDocuments, config);
 	}
 
-	private static void alphaOmegaGridSearch(File modelDir, File evalDir,
-			List<? extends LabeledDocument<State, State>> allDocuments, AnnotationConfig corpusConfig) {
+	private static <LabeledDocumentT extends LabeledDocument<State, State>> void alphaOmegaGridSearch(File modelDir,
+			File evalDir, List<LabeledDocumentT> allDocuments, AnnotationConfig corpusConfig) {
 		int defaultStep = 10;
 		int defaultEpoch = 5;
 
@@ -161,9 +161,9 @@ public class EvaluateParameters {
 		TaggedTimer.printTimings();
 	}
 
-	private static void basicParamsGridSearch(File modelDir, File evalDir,
-			List<AbstractSampler<State, State, State>> samplers,
-			List<? extends LabeledDocument<State, State>> allDocuments, AnnotationConfig corpusConfig) {
+	private static <LabeledDocumentT extends LabeledDocument<State, State>> void basicParamsGridSearch(File modelDir,
+			File evalDir, List<AbstractSampler<State, State>> samplers, List<LabeledDocumentT> allDocuments,
+			AnnotationConfig corpusConfig) {
 		int defaultStep = 10;
 		int defaultEpoch = 5;
 		List<Params> step = new ArrayList<>();
@@ -201,9 +201,9 @@ public class EvaluateParameters {
 		Log.d("Total time: %s", String.valueOf((System.currentTimeMillis() - time)));
 	}
 
-	private static void evaluateParamConfigs(List<Params> paramsList, int nCrossValidation,
-			List<? extends LabeledDocument<State, State>> documents, AnnotationConfig corpusConfig, String descriptor,
-			File modelDir, File evalDir) {
+	private static <LabeledDocumentT extends LabeledDocument<State, State>> void evaluateParamConfigs(
+			List<Params> paramsList, int nCrossValidation, List<LabeledDocumentT> documents,
+			AnnotationConfig corpusConfig, String descriptor, File modelDir, File evalDir) {
 		Log.d("############################");
 		Log.d("############################");
 		Log.d("Evalutate param group: %s", descriptor);
@@ -220,9 +220,9 @@ public class EvaluateParameters {
 				Log.d("############################");
 				Log.d("############################");
 				Log.d("Cross Validation: %s/%s", i + 1, nCrossValidation);
-				DataSplit<? extends LabeledDocument<State, State>> split = new DataSplit<>(documents, 0.8);
-				List<? extends LabeledDocument<State, State>> train = split.getTrain();
-				List<? extends LabeledDocument<State, State>> test = split.getTest();
+				DataSplit<LabeledDocumentT> split = new DataSplit<>(documents, 0.8);
+				List<LabeledDocumentT> train = split.getTrain();
+				List<LabeledDocumentT> test = split.getTest();
 
 				List<AbstractTemplate<State>> templates = new ArrayList<>();
 				templates.add(new RelationTemplate());
@@ -234,23 +234,23 @@ public class EvaluateParameters {
 
 				ObjectiveFunction<State, State> objective = new DefaultObjectiveFunction();
 
-				Initializer<State, State> initializer = new DefaultInitializer();
+				Initializer<LabeledDocumentT, State> initializer = new DefaultInitializer<>();
 				List<Explorer<State>> explorers = new ArrayList<>();
 				explorers.add(new ExhaustiveEntityExplorer(corpusConfig));
 				explorers.add(new ExhaustiveBoundaryExplorer());
 				explorers.add(new RelationExplorer(20, corpusConfig));
-				DefaultSampler<State, State, State> sampler = new DefaultSampler<>(model, scorer, objective,
-						initializer, explorers);
+				DefaultSampler<State, State> sampler = new DefaultSampler<>(model, scorer, objective, explorers,
+						params.numberOfSamplingSteps);
 
-				Trainer<State> trainer = new Trainer<>(model, scorer);
+				Trainer trainer = new Trainer();
 
-				Learner<State> learner = new DefaultLearner<>(model, scorer, 0.1);
+				Learner<State> learner = new DefaultLearner<>(model, 0.1);
 
 				Log.d("Train/test split: %s => #train: %s, #test: %s", split.getSplit(), train.size(), test.size());
 
 				Log.d("####################");
 				Log.d("Start learning");
-				trainer.train(sampler, learner, train, params.numberOfEpochs, params.numberOfSamplingSteps);
+				trainer.train(sampler, initializer, learner, train, params.numberOfEpochs);
 				try {
 					model.saveModelToFile(new File(modelDir,
 							EvaluationUtil.generateFilenameForModel(String.format(MODEL_NAME_PATTERN, descriptor, i,
@@ -271,7 +271,7 @@ public class EvaluateParameters {
 				// } catch (IOException e1) {
 				// e1.printStackTrace();
 				// }
-				List<State> predictions = trainer.test(sampler, test, params.numberOfSamplingSteps);
+				List<State> predictions = trainer.test(sampler, initializer, test);
 				// try {
 				// EvaluationUtil.storeRecord(learner.getTestRecord(), evalDir,
 				// String.format(RECORD_NAME_PATTERN, descriptor, "test", i,

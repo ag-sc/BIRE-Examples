@@ -3,7 +3,7 @@ package corpus.parser.bionlp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -15,8 +15,6 @@ import org.apache.logging.log4j.Logger;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
-import corpus.AnnotationConfig;
-import corpus.BioNLPCorpus;
 import corpus.SubDocument;
 import corpus.parser.ParsingUtils;
 import corpus.parser.bionlp.annotations.BratAnnotation;
@@ -27,6 +25,7 @@ import corpus.parser.bionlp.exceptions.AnnotationReferenceMissingException;
 import corpus.parser.bionlp.exceptions.AnnotationTextMismatchException;
 import corpus.parser.bionlp.exceptions.AnnotationTypeMissingException;
 import corpus.parser.bionlp.julie.Tokenization;
+import logging.Log;
 import utility.ID;
 import utility.VariableID;
 import variables.ArgumentRole;
@@ -37,15 +36,6 @@ import variables.State;
 public class BioNLP2BIREConverter {
 
 	private static Logger log = LogManager.getFormatterLogger(BioNLP2BIREConverter.class.getName());
-
-	private static final Comparator<BratTextBoundAnnotation> textBoundAnnotationComparator = new Comparator<BratTextBoundAnnotation>() {
-
-		@Override
-		public int compare(BratTextBoundAnnotation a1, BratTextBoundAnnotation a2) {
-			return a1.getStart() - a2.getStart();
-		}
-
-	};
 
 	/**
 	 * Converts the Brat Annotations, which are stored in the
@@ -82,6 +72,11 @@ public class BioNLP2BIREConverter {
 					bratDoc.getDocumentName(), eventAnnotationsA1));
 		}
 
+		Set<ID<BratTextBoundAnnotation>> triggerIDs = new HashSet<>();
+		for (BratEventAnnotation event : eventAnnotationsA2) {
+			triggerIDs.add(event.getTriggerID());
+		}
+
 		int sentenceNumber = 0;
 		for (Tokenization tokenization : tokenizations) {
 			log.debug("############");
@@ -93,7 +88,7 @@ public class BioNLP2BIREConverter {
 			State priorKnowledge = new State(doc);
 			/*
 			 * These annotations are provided for the event extraction task as
-			 * initial knowledge. The state sees them as fixed.
+			 * initial knowledge.
 			 */
 			log.debug("Parse A1 annotations...");
 			if (textAnnotationsA1.isEmpty()) {
@@ -103,7 +98,7 @@ public class BioNLP2BIREConverter {
 				if (isInSentence(tann, tokenization)) {
 					try {
 						EntityAnnotation entity = convertTextBoundAnnotation(priorKnowledge, tokenization, tann);
-						entity.setFixed(true);
+						entity.setPriorKnowledge(true);
 						priorKnowledge.addEntity(entity);
 					} catch (Exception e) {
 						log.warn(e);
@@ -119,12 +114,18 @@ public class BioNLP2BIREConverter {
 			 */
 			log.debug("Parse A2 annotations...");
 			for (BratTextBoundAnnotation tann : textAnnotationsA2) {
-				if (isInSentence(tann, tokenization)) {
-					try {
-						EntityAnnotation entity = convertTextBoundAnnotation(goldState, tokenization, tann);
-						goldState.addEntity(entity);
-					} catch (Exception e) {
-						log.warn(e);
+				/*
+				 * Only add text bound annotations that are not the trigger of
+				 * an event.
+				 */
+				if (!triggerIDs.contains(tann.getID())) {
+					if (isInSentence(tann, tokenization)) {
+						try {
+							EntityAnnotation entity = convertTextBoundAnnotation(goldState, tokenization, tann);
+							goldState.addEntity(entity);
+						} catch (Exception e) {
+							log.warn(e);
+						}
 					}
 				}
 			}
@@ -139,6 +140,7 @@ public class BioNLP2BIREConverter {
 					}
 				}
 			}
+
 			try {
 				checkConsistency(goldState);
 				doc.setPriorKnowledge(priorKnowledge);
@@ -171,7 +173,7 @@ public class BioNLP2BIREConverter {
 				eventAnnotations.add((BratEventAnnotation) ann);
 			}
 		}
-		Collections.sort(textAnnotations, textBoundAnnotationComparator);
+		Collections.sort(textAnnotations, (a1, a2) -> a1.getStart() - a2.getStart());
 	}
 
 	private static void checkConsistency(State state)
@@ -215,10 +217,11 @@ public class BioNLP2BIREConverter {
 
 	private static EntityAnnotation convertTextBoundAnnotation(State state, Tokenization tokenization,
 			BratTextBoundAnnotation t) throws AnnotationTypeMissingException, AnnotationTextMismatchException {
-		EntityType entityType = new EntityType(t.getRole());
-		// EntityType entityType = config.getEntityType(t.getRole());
-		if (entityType == null)
-			throw new AnnotationTypeMissingException(String.format("No entity type provided for \"%s\".", t.getRole()));
+		String role = t.getRole();
+		if (role == null)
+			throw new AnnotationTypeMissingException(String.format("No entity type provided for \"%s\".", role));
+		EntityType entityType = new EntityType(role);
+
 		int fromTokenIndex = findTokenForPosition(t.getStart(), tokenization, true);
 		int toTokenIndex = findTokenForPosition(t.getEnd(), tokenization, false) + 1;
 
@@ -242,56 +245,39 @@ public class BioNLP2BIREConverter {
 	private static EntityAnnotation convertEventAnnotation(State state, Tokenization tokenization,
 			BratEventAnnotation e) throws AnnotationTypeMissingException, AnnotationTextMismatchException {
 		Multimap<ArgumentRole, VariableID> arguments = HashMultimap.create();
-		for (Entry<String, ID<? extends BratAnnotation>> entry : e.getArguments().entrySet()) {
+		for (Entry<String, ID<? extends BratAnnotation>> entry : e.getArguments().entries()) {
 			arguments.put(new ArgumentRole(entry.getKey()), new VariableID(entry.getValue().id));
 		}
 
-		// EntityType entityType = config.getEntityType(e.getRole());
-		EntityType entityType = new EntityType(e.getRole());
-		if (entityType == null)
-			throw new AnnotationTypeMissingException(String.format("No entity type provided for \"%s\".", e.getRole()));
+		String role = e.getRole();
+		if (role == null)
+			throw new AnnotationTypeMissingException(String.format("No entity type provided for \"%s\".", role));
+		EntityType entityType = new EntityType(role);
 
-		int fromTokenIndex = findTokenForPosition(e.getTrigger().getStart(), tokenization, true);
-		int toTokenIndex = findTokenForPosition(e.getTrigger().getEnd(), tokenization, false) + 1;
+		BratTextBoundAnnotation triggerAnnotation = e.getTrigger();
+		/*
+		 * Remove the trigger annotation since it is merged into the event.
+		 */
+		// state.removeEntity(new VariableID(triggerAnnotation.getID().id));
+
+		int fromTokenIndex = findTokenForPosition(triggerAnnotation.getStart(), tokenization, true);
+		int toTokenIndex = findTokenForPosition(triggerAnnotation.getEnd(), tokenization, false) + 1;
 		EntityAnnotation entity = new EntityAnnotation(state, e.getID().id, entityType, arguments, fromTokenIndex,
 				toTokenIndex);
-		entity.setOriginalStart(e.getTrigger().getStart());
-		entity.setOriginalEnd(e.getTrigger().getEnd());
-		entity.setOriginalText(e.getTrigger().getText());
-		log.debug("Event Annotation: \"%s\" -> \"%s\"", e.getTrigger().getText(), entity.getText());
-		log.debug("-- Character span %s-%s (%s-%s) -> token span %s-%s", e.getTrigger().getStart(),
-				e.getTrigger().getEnd(), e.getTrigger().getStart() - tokenization.absoluteStartOffset,
-				e.getTrigger().getEnd() - tokenization.absoluteStartOffset, fromTokenIndex, toTokenIndex);
-		if (!e.getTrigger().getText().equals(entity.getText())) {
+		entity.setOriginalStart(triggerAnnotation.getStart());
+		entity.setOriginalEnd(triggerAnnotation.getEnd());
+		entity.setOriginalText(triggerAnnotation.getText());
+		log.debug("Event Annotation: \"%s\" -> \"%s\"", triggerAnnotation.getText(), entity.getText());
+		log.debug("-- Character span %s-%s (%s-%s) -> token span %s-%s", triggerAnnotation.getStart(),
+				triggerAnnotation.getEnd(), triggerAnnotation.getStart() - tokenization.absoluteStartOffset,
+				triggerAnnotation.getEnd() - tokenization.absoluteStartOffset, fromTokenIndex, toTokenIndex);
+		if (!triggerAnnotation.getText().equals(entity.getText())) {
 			throw new AnnotationTextMismatchException(String.format(
 					"Text representations of character-level and token-level do not match: \"%s\" != \"%s\"",
-					e.getTrigger().getText(), entity.getText()));
+					triggerAnnotation.getText(), entity.getText()));
 		}
 		return entity;
 	}
-
-	// private static void convertRelationAnnotation(State state,
-	// AnnotationConfig config, BratRelationAnnotation t) {
-	// Multimap<ArgumentRole, VariableID> arguments = HashMultimap.create();
-	// for (Entry<String, ID<? extends BratAnnotation>> entry :
-	// t.getArguments().entrySet()) {
-	// arguments.put(new ArgumentRole(entry.getKey()), new
-	// VariableID(entry.getValue().id));
-	// }
-	// EntityType entityType = config.getEntityType(t.getRole());
-	// /*
-	// * TODO relations are not motivated by tokens in the text and thus have
-	// * no start, end and text attribute. Here, these values are filled with
-	// * placeholder values
-	// */
-	// EntityAnnotation entity = new EntityAnnotation(state, t.getID().id,
-	// entityType, arguments, -1, -1);
-	// state.addMutableEntity(entity);
-	// }
-	//
-	// private static void convertAttributeAnnotation(State state,
-	// AnnotationConfig config, BratAttributeAnnotation t) {
-	// }
 
 	private static int findTokenForPosition(int documentLevelCharacterPosition, Tokenization tokenization,
 			boolean findLowerBound) {

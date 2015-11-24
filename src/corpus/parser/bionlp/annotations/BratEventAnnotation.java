@@ -1,8 +1,10 @@
 package corpus.parser.bionlp.annotations;
 
 import java.util.HashMap;
-import java.util.Map;
 import java.util.regex.Pattern;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 
 import corpus.parser.bionlp.BratAnnotationManager;
 import utility.ID;
@@ -25,7 +27,7 @@ public class BratEventAnnotation extends BratAnnotation {
 
 	private String role;
 	private ID<BratTextBoundAnnotation> triggerID;
-	private Map<String, ID<? extends BratAnnotation>> arguments = new HashMap<>();
+	private Multimap<String, ID<? extends BratAnnotation>> arguments = HashMultimap.create();
 
 	public String getRole() {
 		return role;
@@ -39,12 +41,12 @@ public class BratEventAnnotation extends BratAnnotation {
 		return (BratTextBoundAnnotation) getAnnotationByID(triggerID);
 	}
 
-	public Map<String, ID<? extends BratAnnotation>> getArguments() {
+	public Multimap<String, ID<? extends BratAnnotation>> getArguments() {
 		return arguments;
 	}
 
 	public BratEventAnnotation(BratAnnotationManager manager, String id, String role, String triggerID,
-			Map<String, ID<? extends BratAnnotation>> arguments) {
+			Multimap<String, ID<? extends BratAnnotation>> arguments) {
 		super(manager, id);
 		this.role = role;
 		this.triggerID = new ID<>(triggerID);

@@ -18,9 +18,9 @@ import org.apache.logging.log4j.Logger;
 
 import com.google.common.collect.Multimap;
 
+import corpus.FileUtils;
 import corpus.SubDocument;
 import corpus.Token;
-import corpus.parser.FileUtils;
 import corpus.parser.bionlp.julie.Tokenization;
 import utility.VariableID;
 import variables.ArgumentRole;

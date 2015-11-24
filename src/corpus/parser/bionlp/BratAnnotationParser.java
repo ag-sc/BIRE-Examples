@@ -13,7 +13,10 @@ import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import corpus.parser.FileUtils;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+
+import corpus.FileUtils;
 import corpus.parser.bionlp.annotations.BratAnnotation;
 import corpus.parser.bionlp.annotations.BratAttributeAnnotation;
 import corpus.parser.bionlp.annotations.BratEventAnnotation;
@@ -121,7 +124,7 @@ public class BratAnnotationParser {
 		String role = split[0];
 		String triggerID = split[1];
 
-		Map<String, ID<? extends BratAnnotation>> arguments = extractArgumentsAsMap(tokenizer);
+		Multimap<String, ID<? extends BratAnnotation>> arguments = extractArgumentsAsMap(tokenizer);
 
 		BratEventAnnotation annotation = new BratEventAnnotation(manager, id, role, triggerID, arguments);
 		return annotation;
@@ -132,7 +135,7 @@ public class BratAnnotationParser {
 
 		String id = tokenizer.nextToken();
 		String role = tokenizer.nextToken();
-		Map<String, ID<? extends BratAnnotation>> arguments = extractArgumentsAsMap(tokenizer);
+		Multimap<String, ID<? extends BratAnnotation>> arguments = extractArgumentsAsMap(tokenizer);
 
 		BratRelationAnnotation annotation = new BratRelationAnnotation(manager, id, role, arguments);
 		return annotation;
@@ -153,8 +156,8 @@ public class BratAnnotationParser {
 		return annotation;
 	}
 
-	private Map<String, ID<? extends BratAnnotation>> extractArgumentsAsMap(StringTokenizer tokenizer) {
-		Map<String, ID<? extends BratAnnotation>> arguments = new HashMap<>();
+	private Multimap<String, ID<? extends BratAnnotation>> extractArgumentsAsMap(StringTokenizer tokenizer) {
+		Multimap<String, ID<? extends BratAnnotation>> arguments = HashMultimap.create();
 		while (tokenizer.hasMoreElements()) {
 			String[] split = tokenizer.nextToken().split(":");
 			arguments.put(split[0], new ID<>(split[1]));

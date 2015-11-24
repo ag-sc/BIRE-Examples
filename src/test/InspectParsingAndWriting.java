@@ -7,8 +7,8 @@ import java.util.stream.Collectors;
 
 import corpus.BioNLPLoader;
 import corpus.Corpus;
+import corpus.FileUtils;
 import corpus.SubDocument;
-import corpus.parser.FileUtils;
 import evaluation.BioNLPEvaluation;
 import logging.Log;
 import variables.State;
@@ -46,6 +46,7 @@ public class InspectParsingAndWriting {
 		// Log.d("### Original:\n%s", FileUtils.readFile(annFile));
 		// Log.d("### Predicted:\n%s", annotationsAsText);
 
+		states.forEach(s -> Log.w("%s", s));
 		// Log.d("#####################");
 		// State state1 = documents.get(4).getGoldState();
 		// State state2 = new State(state1);

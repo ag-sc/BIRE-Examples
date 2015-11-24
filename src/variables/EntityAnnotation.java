@@ -28,12 +28,13 @@ public class EntityAnnotation extends AbstractVariable<State>implements Serializ
 	protected int originalStart;
 	protected int originalEnd;
 
+	protected final State state;
 	/**
 	 * This flag can be used to declare an annotation as fixed, so that the
 	 * Sampler/Explorers don't change this annotation in the processing of
 	 * sample generation.
 	 */
-	protected boolean isFixed = false;
+	protected boolean isPriorKnowledge = false;
 	/**
 	 * We need to keep weak references (IDs only) to other entities in order to
 	 * enable an efficient cloning of states and their entities during the
@@ -44,15 +45,17 @@ public class EntityAnnotation extends AbstractVariable<State>implements Serializ
 
 	public EntityAnnotation(State state, VariableID id, EntityType entityType,
 			Multimap<ArgumentRole, VariableID> arguments, int start, int end) {
-		super(state, id);
+		super(id);
+		this.state = state;
 		this.type = entityType;
 		this.beginTokenIndex = start;
 		this.endTokenIndex = end;
 		this.arguments = arguments;
 	}
 
-	public EntityAnnotation(State s, EntityAnnotation e) {
-		super(s, e.id);
+	public EntityAnnotation(State state, EntityAnnotation e) {
+		super(e.id);
+		this.state = state;
 		this.type = e.type;
 		this.beginTokenIndex = e.beginTokenIndex;
 		this.endTokenIndex = e.endTokenIndex;
@@ -60,7 +63,7 @@ public class EntityAnnotation extends AbstractVariable<State>implements Serializ
 		this.originalText = e.originalText;
 		this.originalStart = e.originalStart;
 		this.originalEnd = e.originalEnd;
-		this.isFixed = e.isFixed;
+		this.isPriorKnowledge = e.isPriorKnowledge;
 	}
 
 	public EntityAnnotation(State state, EntityType entityType, Multimap<ArgumentRole, VariableID> arguments, int start,
@@ -79,6 +82,10 @@ public class EntityAnnotation extends AbstractVariable<State>implements Serializ
 
 	public EntityAnnotation(State state, String id, EntityType entityType, int start, int end) {
 		this(state, new VariableID(id), entityType, HashMultimap.create(), start, end);
+	}
+
+	public State getState() {
+		return state;
 	}
 
 	public EntityType getType() {
@@ -143,12 +150,19 @@ public class EntityAnnotation extends AbstractVariable<State>implements Serializ
 		this.type = type;
 	}
 
-	public void setFixed(boolean b) {
-		this.isFixed = b;
+	/**
+	 * Marks this annotation as fixed. That means, that the sampler should not
+	 * changes this annotation during the sampling process. This is used to
+	 * initialize a state with fixed prior knowledge.
+	 * 
+	 * @param b
+	 */
+	public void setPriorKnowledge(boolean b) {
+		this.isPriorKnowledge = b;
 	}
 
-	public boolean isFixed() {
-		return isFixed;
+	public boolean isPriorKnowledge() {
+		return isPriorKnowledge;
 	}
 
 	public void setBeginTokenIndex(int beginTokenIndex) {

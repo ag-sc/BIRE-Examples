@@ -84,7 +84,8 @@ public class MorphologicalTemplate extends AbstractTemplate<State>implements Ser
 				featureVector.set(entityTypePrefix + "FIRST_TOKEN_PREFIX_" + i + "=" + prefix(first.getText(), i), 1.0);
 			}
 			for (int i = 0; i < tokens.size(); i++) {
-//				featureVector.set(entityTypePrefix + "TOKEN_@" + i + "=" + tokens.get(i).getText(), 1.0);
+				// featureVector.set(entityTypePrefix + "TOKEN_@" + i + "=" +
+				// tokens.get(i).getText(), 1.0);
 				featureVector.set(entityTypePrefix + "CONTAINS_TOKEN=" + tokens.get(i).getText(), 1.0);
 			}
 

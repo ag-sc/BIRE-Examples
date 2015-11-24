@@ -40,7 +40,7 @@ public class ExhaustiveEntityExplorer implements Explorer<State> {
 
 	private List<State> generateStatesForEntities(State previousState) {
 		List<State> generatedStates = new ArrayList<State>();
-		Set<VariableID> previousStatesEntityIDs = previousState.getNonFixedEntityIDs();
+		Set<VariableID> previousStatesEntityIDs = previousState.getEditableEntityIDs();
 		for (VariableID entityID : previousStatesEntityIDs) {
 			EntityAnnotation previousStatesEntity = previousState.getEntity(entityID);
 			Collection<EntityTypeDefinition> entityTypeDefinitions = corpusConfig.getEntityTypeDefinitions();
