@@ -37,24 +37,14 @@ public class ContextTemplate extends AbstractTemplate<State>implements Serializa
 
 			Vector featureVector = new Vector();
 
-			List<Token> tokens = entity.getTokens();
-			Token first = tokens.get(0);
-			Token last = tokens.get(tokens.size() - 1);
-
-			String entityType = "ENTITY_TYPE=" + entity.getType().getName() + "_";
-			// featureVector.set("FIRST_TOKEN_EQUALS=" + first.getText(), 1.0);
-			// featureVector.set("LAST_TOKEN_EQUALS=" + last.getText(), 1.0);
-			featureVector.set(entityType + "FIRST_TOKEN_EQUALS=" + first.getText(), 1.0);
-			featureVector.set(entityType + "LAST_TOKEN_EQUALS=" + last.getText(), 1.0);
+			String entityTypePrefix = "ENTITY_TYPE=" + entity.getType().getName() + "_";
 
 			int[] tokenOffsets = { -2, -1, 1, 2 };
 			for (int i : tokenOffsets) {
 				Token tokenAt = Features.getTokenRelativeToEntity(state, entity, i);
 				if (tokenAt != null) {
 					String at = i > 0 ? "+" + String.valueOf(i) : String.valueOf(i);
-					// featureVector.set("TOKEN@" + at + "_EQUALS=" +
-					// tokenAt.getText(), 1.0);
-					featureVector.set(entityType + "TOKEN@" + at + "_EQUALS=" + tokenAt.getText(), 1.0);
+					featureVector.set(entityTypePrefix + "TOKEN@" + at + "_EQUALS=" + tokenAt.getText(), 1.0);
 				}
 			}
 
@@ -66,10 +56,6 @@ public class ContextTemplate extends AbstractTemplate<State>implements Serializa
 		}
 	}
 
-	// @Override
-	// protected boolean isRelevantChange(StateChange value) {
-	// return relevantChanges.contains(value);
-	// }
 
 	@Override
 	protected Set<AbstractFactor> generateFactors(State state) {

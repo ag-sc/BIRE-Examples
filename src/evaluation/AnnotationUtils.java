@@ -21,7 +21,7 @@ import com.google.common.collect.Multimap;
 import corpus.FileUtils;
 import corpus.SubDocument;
 import corpus.Token;
-import corpus.parser.bionlp.julie.Tokenization;
+import corpus.parser.Tokenization;
 import utility.VariableID;
 import variables.ArgumentRole;
 import variables.EntityAnnotation;
@@ -38,7 +38,7 @@ public class AnnotationUtils {
 	 * @param goldState
 	 * @return
 	 */
-	public static double strictEquality(State state, State goldState) {
+	public static double strictEquality(State state, State goldState, boolean ignoreRelations) {
 		Collection<EntityAnnotation> entities = state.getEntities();
 		Collection<EntityAnnotation> goldEntities = goldState.getEntities();
 		double tpGold = 0;
@@ -49,7 +49,7 @@ public class AnnotationUtils {
 		for (EntityAnnotation goldEntity : goldEntities) {
 			boolean match = false;
 			for (EntityAnnotation entity : entities) {
-				match = matchEntities(entity, goldEntity);
+				match = matchEntities(entity, goldEntity, ignoreRelations);
 				if (match)
 					break;
 			}
@@ -62,7 +62,7 @@ public class AnnotationUtils {
 		for (EntityAnnotation entity : entities) {
 			boolean match = false;
 			for (EntityAnnotation goldEntity : goldEntities) {
-				match = matchEntities(entity, goldEntity);
+				match = matchEntities(entity, goldEntity, ignoreRelations);
 				if (match)
 					break;
 			}
@@ -98,12 +98,12 @@ public class AnnotationUtils {
 	 * @param e2
 	 * @return
 	 */
-	public static boolean matchEntities(EntityAnnotation e1, EntityAnnotation e2) {
+	public static boolean matchEntities(EntityAnnotation e1, EntityAnnotation e2, boolean ignoreRelations) {
 		if (!Objects.equals(e1.getType().getName(), e2.getType().getName()))
 			return false;
 		if (e1.getBeginTokenIndex() != e2.getBeginTokenIndex() || e1.getEndTokenIndex() != e2.getEndTokenIndex())
 			return false;
-		if (!matchArguments(e1, e2))
+		if (!ignoreRelations && !matchArguments(e1, e2))
 			return false;
 		return true;
 
@@ -151,7 +151,7 @@ public class AnnotationUtils {
 			EntityAnnotation e2, Entry<ArgumentRole, VariableID> argument2) {
 		Collection<VariableID> possibleMatches = arguments1.get(argument2.getKey());
 		for (VariableID entityID : possibleMatches) {
-			if (matchEntities(e1.getEntity(entityID), e2.getEntity(argument2.getValue())))
+			if (matchEntities(e1.getEntity(entityID), e2.getEntity(argument2.getValue()), true))
 				return true;
 		}
 		return false;

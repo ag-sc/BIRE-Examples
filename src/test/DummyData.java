@@ -9,18 +9,21 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import corpus.AnnotationConfig;
 import corpus.BioNLPLoader;
 import corpus.DefaultCorpus;
 import corpus.LabeledDocument;
 import corpus.Token;
 import corpus.parser.bionlp.BratConfigReader;
-import logging.Log;
 import variables.EntityAnnotation;
 import variables.EntityType;
 import variables.State;
 
 public class DummyData {
+	private static Logger log = LogManager.getFormatterLogger();
 
 	public static DefaultCorpus<LabeledDocument<State, State>> getDummyData() {
 		BratConfigReader configReader = new BratConfigReader();
@@ -30,7 +33,7 @@ public class DummyData {
 
 		String content = "a critical role for tumor necrosis factor and interleukin-7";
 		List<Token> tokens = extractTokens(content);
-		Log.d("Tokens for dummy data: %s", tokens);
+		log.debug("Tokens for dummy data: %s", tokens);
 
 		DefaultCorpus<LabeledDocument<State, State>> corpus = new DefaultCorpus<>(simplifiedConfig);
 		LabeledDocument<State, State> doc = new LabeledDocument<State, State>("DummyDocument", content, tokens);

@@ -17,6 +17,7 @@ import com.google.common.collect.Multimap;
 
 import corpus.SubDocument;
 import corpus.parser.ParsingUtils;
+import corpus.parser.Tokenization;
 import corpus.parser.bionlp.annotations.BratAnnotation;
 import corpus.parser.bionlp.annotations.BratEventAnnotation;
 import corpus.parser.bionlp.annotations.BratTextBoundAnnotation;
@@ -24,8 +25,6 @@ import corpus.parser.bionlp.exceptions.AnnotationFileException;
 import corpus.parser.bionlp.exceptions.AnnotationReferenceMissingException;
 import corpus.parser.bionlp.exceptions.AnnotationTextMismatchException;
 import corpus.parser.bionlp.exceptions.AnnotationTypeMissingException;
-import corpus.parser.bionlp.julie.Tokenization;
-import logging.Log;
 import utility.ID;
 import utility.VariableID;
 import variables.ArgumentRole;
@@ -34,7 +33,10 @@ import variables.EntityType;
 import variables.State;
 
 public class BioNLP2BIREConverter {
-
+	public static int a1TextBoundMistmatchCounter = 0;
+	public static int a2TextBoundMistmatchCounter = 0;
+	public static int a2EventMistmatchCounter = 0;
+	public static int missedDocumentCounter = 0;
 	private static Logger log = LogManager.getFormatterLogger(BioNLP2BIREConverter.class.getName());
 
 	/**
@@ -51,6 +53,7 @@ public class BioNLP2BIREConverter {
 	 */
 	public static List<SubDocument> convert(BratAnnotatedDocument bratDoc, List<Tokenization> tokenizations)
 			throws AnnotationFileException {
+
 		List<SubDocument> documents = new ArrayList<SubDocument>();
 		log.debug("Split BratDocument %s in %s documents", bratDoc.getDocumentName(), tokenizations.size());
 		Multimap<String, BratAnnotation> annotationsByFilename = bratDoc.getManager().getAnnotationsByFilename();
@@ -100,6 +103,8 @@ public class BioNLP2BIREConverter {
 						EntityAnnotation entity = convertTextBoundAnnotation(priorKnowledge, tokenization, tann);
 						entity.setPriorKnowledge(true);
 						priorKnowledge.addEntity(entity);
+					} catch (AnnotationTextMismatchException e) {
+						a1TextBoundMistmatchCounter++;
 					} catch (Exception e) {
 						log.warn(e);
 						// e.printStackTrace();
@@ -123,6 +128,8 @@ public class BioNLP2BIREConverter {
 						try {
 							EntityAnnotation entity = convertTextBoundAnnotation(goldState, tokenization, tann);
 							goldState.addEntity(entity);
+						} catch (AnnotationTextMismatchException e) {
+							a2TextBoundMistmatchCounter++;
 						} catch (Exception e) {
 							log.warn(e);
 						}
@@ -135,6 +142,8 @@ public class BioNLP2BIREConverter {
 					try {
 						EntityAnnotation entity = convertEventAnnotation(goldState, tokenization, eann);
 						goldState.addEntity(entity);
+					} catch (AnnotationTextMismatchException e) {
+						a2EventMistmatchCounter++;
 					} catch (Exception e) {
 						log.warn(e);
 					}
@@ -149,6 +158,7 @@ public class BioNLP2BIREConverter {
 			} catch (Exception e) {
 				log.warn(e);
 				log.warn("--> Skip inconsistent document \"%s\"", doc.getName());
+				missedDocumentCounter++;
 			}
 			sentenceNumber++;
 		}
@@ -236,7 +246,7 @@ public class BioNLP2BIREConverter {
 				fromTokenIndex, toTokenIndex);
 		if (!t.getText().equals(entity.getText())) {
 			throw new AnnotationTextMismatchException(String.format(
-					"Text representations of character-level and token-level do not match: \"%s\" != \"%s\"",
+					"TextBound: Text representations of character-level and token-level do not match: \"%s\" != \"%s\"",
 					t.getText(), entity.getText()));
 		}
 		return entity;
@@ -273,7 +283,7 @@ public class BioNLP2BIREConverter {
 				triggerAnnotation.getEnd() - tokenization.absoluteStartOffset, fromTokenIndex, toTokenIndex);
 		if (!triggerAnnotation.getText().equals(entity.getText())) {
 			throw new AnnotationTextMismatchException(String.format(
-					"Text representations of character-level and token-level do not match: \"%s\" != \"%s\"",
+					"Event: Text representations of character-level and token-level do not match: \"%s\" != \"%s\"",
 					triggerAnnotation.getText(), entity.getText()));
 		}
 		return entity;

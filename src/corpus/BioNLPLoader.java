@@ -14,34 +14,57 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import corpus.parser.JavaSentenceSplitter;
+import corpus.parser.SimpleRegexTokenizer;
+import corpus.parser.Tokenization;
+import corpus.parser.Tokenizer;
 import corpus.parser.bionlp.BioNLP2BIREConverter;
 import corpus.parser.bionlp.BratAnnotatedDocument;
 import corpus.parser.bionlp.BratAnnotationParser;
 import corpus.parser.bionlp.BratConfigReader;
 import corpus.parser.bionlp.exceptions.AnnotationFileException;
-import corpus.parser.bionlp.julie.JavaSentenceSplitter;
-import corpus.parser.bionlp.julie.Tokenization;
-import logging.Log;
 
 public class BioNLPLoader {
+	private static Logger log = LogManager.getFormatterLogger();
 
 	public static final File TOKEN_MODEL_FILE = new File("res/bionlp/julie/models/JULIE_life-science-1.6-token.mod.gz");
 	public static final File SENTENCE_MODEL_FILE = new File(
 			"res/bionlp/julie/models/JULIE_life-science-1.6-sentence.mod.gz");
 
+	// private static Tokenizer tokenizer = new StanfordTokenizer();
+	private static Tokenizer tokenizer = new SimpleRegexTokenizer();
+
 	public static void main(String[] args) {
-		BioNLPCorpus train = loadBioNLP2013Train(false);
-		BioNLPCorpus dev = loadBioNLP2013Dev(false);
-		Log.d("##### BioNLP 2013 #####");
-		Log.d("Train: %s documents.", train.getDocuments().size());
-		Log.d("Dev: %s documents.", dev.getDocuments().size());
+		BioNLPCorpus train = loadBioNLP2013Train(true);
+		int a1TTrain = BioNLP2BIREConverter.a1TextBoundMistmatchCounter;
+		int a2TTrain = BioNLP2BIREConverter.a2TextBoundMistmatchCounter;
+		int a2ETrain = BioNLP2BIREConverter.a2EventMistmatchCounter;
+		int mdTrain = BioNLP2BIREConverter.missedDocumentCounter;
+		BioNLP2BIREConverter.a1TextBoundMistmatchCounter = 0;
+		BioNLP2BIREConverter.a2TextBoundMistmatchCounter = 0;
+		BioNLP2BIREConverter.a2EventMistmatchCounter = 0;
+		BioNLP2BIREConverter.missedDocumentCounter = 0;
+		BioNLPCorpus dev = loadBioNLP2013Dev(true);
+		int a1TDev = BioNLP2BIREConverter.a1TextBoundMistmatchCounter;
+		int a2TDev = BioNLP2BIREConverter.a2TextBoundMistmatchCounter;
+		int a2EDev = BioNLP2BIREConverter.a2EventMistmatchCounter;
+		int mdDev = BioNLP2BIREConverter.missedDocumentCounter;
+
+		log.info("##### BioNLP 2013 #####");
+		log.info("Train: %s documents. (%s, %s, %s) missed annotations -> %s missed documents.",
+				train.getDocuments().size(), a1TTrain, a2TTrain, a2ETrain, mdTrain);
+		log.info("Dev: %s documents. (%s, %s, %s) missed annotations -> %s missed documents.",
+				dev.getDocuments().size(), a1TDev, a2TDev, a2EDev, mdDev);
 	}
 
 	public static BioNLPCorpus setupCorpus(File configFile) {
 		BratConfigReader confReader = new BratConfigReader();
-		Log.d("### Annotation configuration:");
+		log.debug("### Annotation configuration:");
 		AnnotationConfig config = confReader.readConfig(configFile);
-		Log.d("%s", config);
+		log.debug("%s", config);
 		return new BioNLPCorpus(config);
 	}
 
@@ -106,14 +129,14 @@ public class BioNLPLoader {
 		completeDocuments.retainAll(annotationA1Files.keySet());
 		completeDocuments.retainAll(annotationA2Files.keySet());
 
-		Log.d("%s documents with a given text and annotation files", completeDocuments.size());
-		Log.d("filesnames: %s", completeDocuments);
+		log.debug("%s documents with a given text and annotation files", completeDocuments.size());
+		log.debug("filesnames: %s", completeDocuments);
 
 		int current = 1;
 		for (String filename : completeDocuments) {
-			Log.d("#############################");
-			Log.d("#############################");
-			Log.d("parse document \"%s\" (%s/%s)", filename, current, completeDocuments.size());
+			log.debug("#############################");
+			log.debug("#############################");
+			log.debug("parse document \"%s\" (%s/%s)", filename, current, completeDocuments.size());
 
 			File annA1File = annotationA1Files.get(filename);
 			File annA2File = annotationA2Files.get(filename);
@@ -122,7 +145,7 @@ public class BioNLPLoader {
 				loadDocuments(corpus, textFile, Arrays.asList(annA1File, annA2File));
 			} catch (Exception e1) {
 				e1.printStackTrace();
-				Log.w("Parsing of files for %s not possible. Skip this instance", filename);
+				log.warn("Parsing of files for %s not possible. Skip this instance", filename);
 			}
 			current++;
 		}
@@ -130,7 +153,7 @@ public class BioNLPLoader {
 			try {
 				System.out.println("store");
 				saveCorpusToFile(corpus, destFilepath);
-				Log.d("Corpus (%s documents) successfully parsed and stored to file \"%s\"",
+				log.debug("Corpus (%s documents) successfully parsed and stored to file \"%s\"",
 						corpus.getDocuments().size(), destFilepath);
 				System.out.println("done!");
 			} catch (FileNotFoundException e) {
@@ -158,20 +181,20 @@ public class BioNLPLoader {
 	public static void loadDocuments(BioNLPCorpus corpus, File textFile, List<File> annFiles)
 			throws FileNotFoundException, ClassNotFoundException, IOException {
 
-		Log.d("#####################");
-		Log.d("### Brat annotations...");
+		log.debug("#####################");
+		log.debug("### Brat annotations...");
 		BratAnnotationParser parser = new BratAnnotationParser();
 		BratAnnotatedDocument bratDoc = parser.parseFile(textFile, annFiles);
 
-		Log.d("#####################");
-		Log.d("### Text splitting in sentences...");
+		log.debug("#####################");
+		log.debug("### Text splitting in sentences...");
 		List<String> sentences = JavaSentenceSplitter.getSentencesAsList(textFile);
-		Log.d("#####################");
-		Log.d("### Tokenization of sentences...");
-		List<Tokenization> tokenizations = Tokenization.extractTokens(sentences, TOKEN_MODEL_FILE.getPath());
+		log.debug("#####################");
+		log.debug("### Tokenization of sentences...");
+		List<Tokenization> tokenizations = tokenizer.tokenize(sentences);
 
-		Log.d("#####################");
-		Log.d("### BIRE annotations...");
+		log.debug("#####################");
+		log.debug("### BIRE annotations...");
 		List<SubDocument> documents;
 		try {
 			documents = BioNLP2BIREConverter.convert(bratDoc, tokenizations);

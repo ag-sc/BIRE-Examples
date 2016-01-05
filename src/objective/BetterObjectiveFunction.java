@@ -15,9 +15,10 @@ import variables.ArgumentRole;
 import variables.EntityAnnotation;
 import variables.State;
 
+@Deprecated
 public class BetterObjectiveFunction extends ObjectiveFunction<State, State>implements Serializable {
 
-	private static Logger log = LogManager.getFormatterLogger(BetterObjectiveFunction.class.getName());
+	private static Logger log = LogManager.getFormatterLogger();
 
 	/**
 	 * WORK IN PROGRESS
@@ -38,12 +39,12 @@ public class BetterObjectiveFunction extends ObjectiveFunction<State, State>impl
 			for (EntityAnnotation entity : entities) {
 				double max = 0.0;
 				for (EntityAnnotation goldEntity : goldEntities) {
-					if (typeMatches(entity, goldEntity)) {
-						double overlapScore = overlapScore(entity, goldEntity);
-						double argumentScore = argumentScore(entity, goldEntity);
-						if (max < overlapScore * argumentScore) {
-							max = overlapScore * argumentScore;
-						}
+					double typeScore = typeMatches(entity, goldEntity) ? 1.0 : 0.0;
+					double overlapScore = overlapScore(entity, goldEntity);
+					double argumentScore = argumentScore(entity, goldEntity);
+					double entityScore = overlapScore * argumentScore * typeScore;
+					if (max < entityScore) {
+						max = entityScore;
 					}
 				}
 				precision += max;
@@ -53,12 +54,13 @@ public class BetterObjectiveFunction extends ObjectiveFunction<State, State>impl
 			for (EntityAnnotation goldEntity : goldEntities) {
 				double max = 0.0;
 				for (EntityAnnotation entity : entities) {
-					if (typeMatches(goldEntity, entity)) {
-						double overlapScore = overlapScore(goldEntity, entity);
-						double argumentScore = argumentScore(goldEntity, entity);
-						if (max < overlapScore * argumentScore) {
-							max = overlapScore * argumentScore;
-						}
+					double typeScore = typeMatches(goldEntity, entity) ? 1.0 : 0.0;
+					double overlapScore = overlapScore(goldEntity, entity);
+					double argumentScore = argumentScore(goldEntity, entity);
+
+					double entityScore = overlapScore * argumentScore * typeScore;
+					if (max < entityScore) {
+						max = entityScore;
 					}
 				}
 				recall += max;

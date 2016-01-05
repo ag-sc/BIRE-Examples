@@ -106,6 +106,20 @@ public class Features {
 			return null;
 		return state.getDocument().getTokens().get(absolutPosition);
 	}
+
+	public static String suffix(String text, int i) {
+		if (i > 0)
+			return text.substring(Math.max(0, text.length() - i));
+		else
+			return "";
+	}
+
+	public static String prefix(String text, int i) {
+		if (i > 0) {
+			return text.substring(0, Math.min(text.length(), i));
+		} else
+			return "";
+	}
 }
 
 abstract class TokenFeature {

@@ -6,12 +6,13 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -22,11 +23,10 @@ import corpus.parser.bionlp.annotations.BratAttributeAnnotation;
 import corpus.parser.bionlp.annotations.BratEventAnnotation;
 import corpus.parser.bionlp.annotations.BratRelationAnnotation;
 import corpus.parser.bionlp.annotations.BratTextBoundAnnotation;
-import logging.Log;
 import utility.ID;
 
 public class BratAnnotationParser {
-
+	private static Logger log = LogManager.getFormatterLogger();
 	private static final String COMMENT_INDICATOR = "#";
 	private static final String UNKNOWN_ANNOTATION_TYPE = "Line %s was not recognized as a supported annotation:\n"
 			+ "\t%s";
@@ -45,7 +45,7 @@ public class BratAnnotationParser {
 				int lineNumber = 0;
 				while ((line = annotationReader.readLine()) != null) {
 					if (line.startsWith(COMMENT_INDICATOR)) {
-						Log.w("Skip comment: \"%s\"", line);
+						log.warn("Skip comment: \"%s\"", line);
 					} else {
 						BratAnnotation annotation = parseLine(line, lineNumber);
 						if (annotation != null) {
@@ -95,7 +95,7 @@ public class BratAnnotationParser {
 		if (attributeMatcher.matches()) {
 			return parseAttributeAnnotation(line);
 		}
-		Log.w(UNKNOWN_ANNOTATION_TYPE, lineNumber, line);
+		log.warn(UNKNOWN_ANNOTATION_TYPE, lineNumber, line);
 		return null;
 	}
 

@@ -74,20 +74,51 @@ public class MorphologicalTemplate extends AbstractTemplate<State>implements Ser
 
 			int[] suffixLengths = { 2, 3 };
 			for (int i : suffixLengths) {
-				featureVector.set(entityTypePrefix + "LAST_TOKEN_SUFFIX_" + i + "=" + suffix(last.getText(), i), 1.0);
-				featureVector.set(entityTypePrefix + "FIRST_TOKEN_SUFFIX_" + i + "=" + suffix(first.getText(), i), 1.0);
+				if (last.getText().length() >= i)
+					featureVector.set(
+							entityTypePrefix + "LAST_TOKEN_SUFFIX_" + i + "=" + Features.suffix(last.getText(), i),
+							1.0);
+				if (first.getText().length() >= i)
+					featureVector.set(
+							entityTypePrefix + "FIRST_TOKEN_SUFFIX_" + i + "=" + Features.suffix(first.getText(), i),
+							1.0);
 			}
 
 			int[] prefixLengths = { 2, 3 };
 			for (int i : prefixLengths) {
-				featureVector.set(entityTypePrefix + "LAST_TOKEN_PREFIX_" + i + "=" + prefix(last.getText(), i), 1.0);
-				featureVector.set(entityTypePrefix + "FIRST_TOKEN_PREFIX_" + i + "=" + prefix(first.getText(), i), 1.0);
+				if (last.getText().length() >= i)
+					featureVector.set(
+							entityTypePrefix + "LAST_TOKEN_PREFIX_" + i + "=" + Features.prefix(last.getText(), i),
+							1.0);
+				if (first.getText().length() >= i)
+					featureVector.set(
+							entityTypePrefix + "FIRST_TOKEN_PREFIX_" + i + "=" + Features.prefix(first.getText(), i),
+							1.0);
 			}
+
+			// for (int i = 0; i < tokens.size(); i++) {
+			// featureVector.set(entityTypePrefix + "CONTAINS_TOKEN=" +
+			// tokens.get(i).getText(), 1.0);
+			// }
+
 			for (int i = 0; i < tokens.size(); i++) {
-				// featureVector.set(entityTypePrefix + "TOKEN_@" + i + "=" +
-				// tokens.get(i).getText(), 1.0);
-				featureVector.set(entityTypePrefix + "CONTAINS_TOKEN=" + tokens.get(i).getText(), 1.0);
+				Token t1 = tokens.get(i);
+				for (int j = i + 1; j < tokens.size(); j++) {
+					Token t2 = tokens.get(j);
+					String text1 = null;
+					String text2 = null;
+					if (t1.getText().compareTo(t2.getText()) < 0) {
+						text1 = t1.getText();
+						text2 = t2.getText();
+					} else {
+						text1 = t2.getText();
+						text2 = t1.getText();
+					}
+					featureVector.set(entityTypePrefix + "TOKEN=" + text1 + "_AND_TOKEN=" + text2 + "_CO-OCCUR", 1.0);
+				}
 			}
+			featureVector.set(entityTypePrefix + "FIRST_TOKEN_EQUALS=" + first.getText(), 1.0);
+			featureVector.set(entityTypePrefix + "LAST_TOKEN_EQUALS=" + last.getText(), 1.0);
 
 			log.debug("%s: Features for entity %s (\"%s\"): %s", this.getClass().getSimpleName(), entity.getID(),
 					entity.getText(), featureVector);
@@ -110,20 +141,6 @@ public class MorphologicalTemplate extends AbstractTemplate<State>implements Ser
 			factors.add(new SingleVariableFactor(this, entityID));
 		}
 		return factors;
-	}
-
-	private String suffix(String text, int i) {
-		if (i > 0)
-			return text.substring(Math.max(0, text.length() - i));
-		else
-			return "";
-	}
-
-	private String prefix(String text, int i) {
-		if (i > 0) {
-			return text.substring(0, Math.min(text.length(), i));
-		} else
-			return "";
 	}
 
 }

@@ -5,15 +5,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import corpus.BioNLPLoader;
 import corpus.Corpus;
 import corpus.FileUtils;
 import corpus.SubDocument;
-import evaluation.BioNLPEvaluation;
-import logging.Log;
+import evaluation.BioNLPEvaluationUtils;
 import variables.State;
 
 public class InspectParsingAndWriting {
+	private static Logger log = LogManager.getFormatterLogger();
 
 	/**
 	 * Parses one specific document (annotation-text file pair) into the BIRE
@@ -40,13 +43,13 @@ public class InspectParsingAndWriting {
 
 		List<SubDocument> documents = corpus.getDocuments();
 		List<State> states = documents.stream().map(d -> d.getGoldResult()).collect(Collectors.toList());
-		Log.d("#####################");
-		Set<File> files = BioNLPEvaluation.statesToBioNLPFiles(predDir, states, true);
-		Log.d("Parsed and written %s documents", files.size());
+		log.debug("#####################");
+		Set<File> files = BioNLPEvaluationUtils.statesToBioNLPFiles(predDir, states, true);
+		log.debug("Parsed and written %s documents", files.size());
 		// Log.d("### Original:\n%s", FileUtils.readFile(annFile));
 		// Log.d("### Predicted:\n%s", annotationsAsText);
 
-		states.forEach(s -> Log.w("%s", s));
+		states.forEach(s -> log.warn("%s", s));
 		// Log.d("#####################");
 		// State state1 = documents.get(4).getGoldState();
 		// State state2 = new State(state1);

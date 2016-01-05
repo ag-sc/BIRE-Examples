@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
@@ -24,7 +27,6 @@ import corpus.EntityTypeDefinition;
 import corpus.LabeledDocument;
 import corpus.Token;
 import corpus.parser.ParsingUtils;
-import logging.Log;
 import utility.VariableID;
 import variables.Argument;
 import variables.ArgumentRole;
@@ -33,7 +35,7 @@ import variables.EntityType;
 import variables.State;
 
 public class UsageParser {
-
+	private static Logger log = LogManager.getFormatterLogger();
 	private static final String SUBJECTIVE_TYPE_NAME = "SUBJECTIVE";
 	private static final String POSITIVE_SUBJECTIVE_TYPE_NAME = "POSITIVE-SUBJECTIVE";
 	private static final String NEUTRAL_SUBJECTIVE_TYPE_NAME = "NEUTRAL-SUBJECTIVE";
@@ -59,7 +61,7 @@ public class UsageParser {
 		File annDir = new File("res/usage/de");
 
 		DefaultCorpus<LabeledDocument<State, State>> corpus = parseCorpus(annDir);
-		Log.d("Corpus: %s", corpus.toDetailedString());
+		log.debug("Corpus: %s", corpus.toDetailedString());
 	}
 
 	public static DefaultCorpus<LabeledDocument<State, State>> parseCorpus(File annDir) {
@@ -120,7 +122,7 @@ public class UsageParser {
 
 	private static Collection<LabeledDocument<State, State>> parseFile(
 			DefaultCorpus<LabeledDocument<State, State>> corpus, String category, File t, File a1, File r1) {
-		Log.d("Process category %s", category);
+		log.debug("Process category %s", category);
 		Map<String, LabeledDocument<State, State>> documents = parseDocument(corpus, category, t);
 
 		addEntities(corpus, a1, documents);
@@ -196,22 +198,24 @@ public class UsageParser {
 
 				EntityType entityType = new EntityType(entityTypeName);
 				if (entityType == null) {
-					Log.w("EnitityType %s for annotation \"%s\" in file %s and line %s not found in given config.",
+					log.warn("EnitityType %s for annotation \"%s\" in file %s and line %s not found in given config.",
 							entityTypeName, text, annotationFile, lineNumber);
 				}
 
 				// FIXME check if span search is correct for Usage annotations
 				int beginTokenIndex = ParsingUtils.binarySpanSearch(doc.getTokens(), from, true);
 				if (beginTokenIndex == -1) {
-					Log.w("No (begin) token found for character position %s for annotation \"%s\" in file %s and line %s.",
+					log.warn(
+							"No (begin) token found for character position %s for annotation \"%s\" in file %s and line %s.",
 							from, text, annotationFile, lineNumber);
-					Log.d("Tokens: %s", doc.getTokens());
+					log.debug("Tokens: %s", doc.getTokens());
 				}
 				int endTokenIndex = ParsingUtils.binarySpanSearch(doc.getTokens(), to, false);
 				if (endTokenIndex == -1) {
-					Log.w("No (end) token found for character position %s for annotation \"%s\" in file %s and line %s.",
+					log.warn(
+							"No (end) token found for character position %s for annotation \"%s\" in file %s and line %s.",
 							to, text, annotationFile, lineNumber);
-					Log.d("Tokens: %s", doc.getTokens());
+					log.debug("Tokens: %s", doc.getTokens());
 				}
 
 				EntityAnnotation e = new EntityAnnotation(goldState, entityID, entityType, beginTokenIndex,
@@ -247,7 +251,7 @@ public class UsageParser {
 				State goldState = doc.getGoldResult();
 				EntityType entityType = new EntityType(entityTypeName);
 				if (entityType == null) {
-					Log.w("EnitityType \"%s\" for annotation in file %s and line %s not found in given config.",
+					log.warn("EnitityType \"%s\" for annotation in file %s and line %s not found in given config.",
 							entityTypeName, relationFile, lineNumber);
 				}
 				Multimap<ArgumentRole, VariableID> arguments = HashMultimap.create();
@@ -268,14 +272,14 @@ public class UsageParser {
 					triggerID = argument2ID;
 					arguments.put(REFERENT_ROLE, new VariableID(argument1ID));
 				} else {
-					Log.w("Unexpected relation type \"%s\" found in file %s and line %s.", entityTypeName, relationFile,
-							lineNumber);
+					log.warn("Unexpected relation type \"%s\" found in file %s and line %s.", entityTypeName,
+							relationFile, lineNumber);
 				}
 
 				EntityAnnotation trigger = goldState.getEntity(new VariableID(triggerID));
 
 				if (trigger == null) {
-					Log.w("No (trigger) entity found for id \"%s\" in file %s and line %s.", triggerID, relationFile,
+					log.warn("No (trigger) entity found for id \"%s\" in file %s and line %s.", triggerID, relationFile,
 							lineNumber);
 				}
 
@@ -293,8 +297,7 @@ public class UsageParser {
 	}
 
 	private static List<Token> tokenize(String content) {
-		Log.methodOff();
-		Log.d("Text (%s): %s", content.length(), content);
+		log.debug("Text (%s): %s", content.length(), content);
 		List<Token> tokens = new ArrayList<Token>();
 		Locale currentLocale = Locale.GERMANY;
 
@@ -307,12 +310,12 @@ public class UsageParser {
 		while ((to = wordIterator.next()) != BreakIterator.DONE) {
 			String text = content.substring(from, to);
 			if (!text.matches("\\s+")) {
-				Log.d("%s: %s - %s: %s", index, from, to, text);
+				log.debug("%s: %s - %s: %s", index, from, to, text);
 				Token token = new Token(index, from, to, text);
 				tokens.add(token);
 				index++;
 			} else {
-				Log.d("%s: %s - %s: %s\t(Whitespace only. Skip.)", index, from, to, text);
+				log.debug("%s: %s - %s: %s\t(Whitespace only. Skip.)", index, from, to, text);
 			}
 			from = to;
 		}
@@ -323,7 +326,7 @@ public class UsageParser {
 		// int from = m.start();
 		// int to = m.end();
 		// String text = m.group();
-		// Log.d("%s: %s", index, text);
+		// log.debug("%s: %s", index, text);
 		// Token token = new Token(index, from, to, text);
 		// tokens.add(token);
 		// }

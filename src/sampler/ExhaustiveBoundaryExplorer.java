@@ -63,7 +63,7 @@ public class ExhaustiveBoundaryExplorer implements Explorer<State> {
 				}
 			}
 			if (to < previousState.getDocument().getTokens().size()) {
-				if (!noOverlaps || !previousState.tokenHasAnnotation(to + 1)) {
+				if (!noOverlaps || !previousState.tokenHasAnnotation(to)) {
 					// Expand right
 					State generatedState = new State(previousState);
 					EntityAnnotation entity = generatedState.getEntity(entityID);

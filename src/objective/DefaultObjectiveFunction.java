@@ -19,7 +19,14 @@ public class DefaultObjectiveFunction extends ObjectiveFunction<State, State>imp
 
 	private static Logger log = LogManager.getFormatterLogger(DefaultObjectiveFunction.class.getName());
 
+	private boolean ignoreRelations;
+
 	public DefaultObjectiveFunction() {
+		this(false);
+	}
+
+	public DefaultObjectiveFunction(boolean ignoreRelations) {
+		this.ignoreRelations = ignoreRelations;
 	}
 
 	@Override
@@ -37,7 +44,7 @@ public class DefaultObjectiveFunction extends ObjectiveFunction<State, State>imp
 				for (EntityAnnotation goldEntity : goldEntities) {
 					if (typeMatches(entity, goldEntity)) {
 						double overlapScore = overlapScore(entity, goldEntity);
-						double argumentScore = argumentScore(entity, goldEntity);
+						double argumentScore = ignoreRelations ? 1.0 : argumentScore(entity, goldEntity);
 						if (max < overlapScore * argumentScore) {
 							max = overlapScore * argumentScore;
 						}
@@ -52,7 +59,7 @@ public class DefaultObjectiveFunction extends ObjectiveFunction<State, State>imp
 				for (EntityAnnotation entity : entities) {
 					if (typeMatches(goldEntity, entity)) {
 						double overlapScore = overlapScore(goldEntity, entity);
-						double argumentScore = argumentScore(goldEntity, entity);
+						double argumentScore = ignoreRelations ? 1.0 : argumentScore(goldEntity, entity);
 						if (max < overlapScore * argumentScore) {
 							max = overlapScore * argumentScore;
 						}

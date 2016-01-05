@@ -92,7 +92,7 @@ public class State extends AbstractState implements Serializable {
 	public void removeEntity(EntityAnnotation entity) {
 		log.debug("State %s: REMOVE annotation: %s", this.getID(), entity);
 		entities.remove(entity.getID());
-		entities.put(entity.getID(), entity);
+		// entities.put(entity.getID(), entity);
 		removeFromTokenToEntityMapping(entity);
 		removeReferencingArguments(entity);
 		// changedEntities.put(entity.getID(), StateChange.REMOVE_ANNOTATION);
@@ -142,6 +142,10 @@ public class State extends AbstractState implements Serializable {
 	}
 
 	public boolean tokenHasAnnotation(int tokenIndex) {
+		if (tokenIndex >= document.getTokens().size()) {
+			log.error("Token index %s exceeds bounds of document of length %s", tokenIndex,
+					document.getTokens().size());
+		}
 		Set<VariableID> entitiesForToken = tokenToEntities.get(tokenIndex);
 		return entitiesForToken != null && !entitiesForToken.isEmpty();
 	}
@@ -191,10 +195,6 @@ public class State extends AbstractState implements Serializable {
 			for (Entry<ArgumentRole, VariableID> entry : arguments.entries()) {
 				if (entry.getValue().equals(removedEntity.getID())) {
 					e.removeArgument(entry.getKey(), entry.getValue());
-					/*
-					 * Note: no need to mark entity as changed here. This will
-					 * happen in the entity's removeArgument-method
-					 */
 				}
 			}
 		}

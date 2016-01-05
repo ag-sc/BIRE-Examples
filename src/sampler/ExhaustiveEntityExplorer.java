@@ -14,7 +14,6 @@ import corpus.Token;
 import sampling.Explorer;
 import utility.VariableID;
 import variables.EntityAnnotation;
-import variables.EntityType;
 import variables.State;
 
 public class ExhaustiveEntityExplorer implements Explorer<State> {

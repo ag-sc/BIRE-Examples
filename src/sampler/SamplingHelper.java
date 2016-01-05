@@ -21,6 +21,7 @@ import variables.EntityAnnotation;
 import variables.EntityAnnotation;
 import variables.State;
 
+@Deprecated
 public class SamplingHelper {
 	private static Logger log = LogManager.getFormatterLogger(SamplingHelper.class.getName());
 

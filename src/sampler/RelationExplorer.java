@@ -8,11 +8,11 @@ import org.apache.logging.log4j.Logger;
 
 import changes.StateChange;
 import corpus.AnnotationConfig;
-import logging.Log;
 import sampling.Explorer;
 import variables.EntityAnnotation;
 import variables.State;
 
+@Deprecated
 public class RelationExplorer implements Explorer<State> {
 
 	private static Logger log = LogManager.getFormatterLogger(RelationExplorer.class.getName());
@@ -41,26 +41,26 @@ public class RelationExplorer implements Explorer<State> {
 						StateChange.CHANGE_ARGUMENT_ENTITY, StateChange.DO_NOTHING);
 				switch (stateChange) {
 				case ADD_ARGUMENT:
-					Log.d("%s: add annotation argument.", generatedState.getID());
+					log.debug("%s: add annotation argument.", generatedState.getID());
 					SamplingHelper.addRandomArgument(sampledEntity, generatedState, corpusConfig);
 					break;
 				case REMOVE_ARGUMENT:
-					Log.d("%s: remove annotation argument.", generatedState.getID());
+					log.debug("%s: remove annotation argument.", generatedState.getID());
 					SamplingHelper.removeRandomArgument(sampledEntity);
 					break;
 				case CHANGE_ARGUMENT_ROLE:
-					Log.d("%s: change argument role", generatedState.getID());
+					log.debug("%s: change argument role", generatedState.getID());
 					SamplingHelper.changeRandomArgumentRole(sampledEntity, generatedState, corpusConfig);
 					break;
 				case CHANGE_ARGUMENT_ENTITY:
-					Log.d("%s: change argument entity", generatedState.getID());
+					log.debug("%s: change argument entity", generatedState.getID());
 					SamplingHelper.changeRandomArgumentEntity(sampledEntity, generatedState, corpusConfig);
 					break;
 				case DO_NOTHING:
-					Log.d("Do not change the state");
+					log.debug("Do not change the state");
 					break;
 				default:
-					Log.d("%s: unsupported state change", generatedState.getID());
+					log.debug("%s: unsupported state change", generatedState.getID());
 					break;
 				}
 			}

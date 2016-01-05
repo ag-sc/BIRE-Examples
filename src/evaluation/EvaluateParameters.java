@@ -7,6 +7,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import corpus.AnnotationConfig;
 import corpus.BioNLPCorpus;
 import corpus.BioNLPLoader;
@@ -21,16 +24,15 @@ import learning.Model;
 import learning.ObjectiveFunction;
 import learning.Scorer;
 import learning.Trainer;
-import logging.Log;
 import objective.DefaultObjectiveFunction;
 import sampler.DefaultInitializer;
 import sampler.ExhaustiveBoundaryExplorer;
 import sampler.ExhaustiveEntityExplorer;
 import sampler.RelationExplorer;
-import sampling.AbstractSampler;
 import sampling.DefaultSampler;
 import sampling.Explorer;
 import sampling.Initializer;
+import sampling.Sampler;
 import templates.AbstractTemplate;
 import templates.ContextTemplate;
 import templates.MorphologicalTemplate;
@@ -38,7 +40,7 @@ import templates.RelationTemplate;
 import variables.State;
 
 public class EvaluateParameters {
-
+	private static Logger log = LogManager.getFormatterLogger();
 	private static final String BIONLP_EVAL_DIR_PATH = "res/bionlp/eval";
 	private static final String BIONLP_MODELS_DIR_PATH = "res/bionlp/models";
 	public static final int USAGE = 0;
@@ -95,7 +97,7 @@ public class EvaluateParameters {
 				corpus = dummyCorpus;
 			} catch (Exception e) {
 				e.printStackTrace();
-				Log.w("Preparsed corpus not accessible or corrupted. Parse again:");
+				log.warn("Preparsed corpus not accessible or corrupted. Parse again:");
 				corpus = UsageLoader.convertDatasetToJavaBinaries(DatasetConfig.getUSAGEJavaBinFilepath());
 			}
 			break;
@@ -114,14 +116,14 @@ public class EvaluateParameters {
 			break;
 		}
 
-		Log.d("Corpus:\n%s", corpus);
+		log.debug("Corpus:\n%s", corpus);
 
 		// Leave-one-out
 
 		List<? extends LabeledDocument<State, State>> allDocuments = corpus.getDocuments();
 		for (int i = 0; i < allDocuments.size(); i++) {
 			LabeledDocument<State, State> doc = allDocuments.get(i);
-			Log.d("%s: %s", i, doc.getGoldResult());
+			log.debug("%s: %s", i, doc.getGoldResult());
 		}
 		// allDocuments = allDocuments.subList(137, 140);
 
@@ -150,19 +152,19 @@ public class EvaluateParameters {
 		long time = System.currentTimeMillis();
 		evaluateParamConfigs(alpha, n, allDocuments, corpusConfig, "alpha", modelDir, evalDir);
 		evaluateParamConfigs(omega, n, allDocuments, corpusConfig, "omega", modelDir, evalDir);
-		// Log.d("Overall performance:");
+		// log.debug("Overall performance:");
 		// EvaluationUtil.printPerformance(testRecords);
-		Log.d("############################");
-		Log.d("############################");
-		Log.d("############# ALL DONE #############");
-		Log.d("Total time: %s", String.valueOf((System.currentTimeMillis() - time)));
+		log.debug("############################");
+		log.debug("############################");
+		log.debug("############# ALL DONE #############");
+		log.debug("Total time: %s", String.valueOf((System.currentTimeMillis() - time)));
 
-		Log.d("############################");
+		log.debug("############################");
 		TaggedTimer.printTimings();
 	}
 
 	private static <LabeledDocumentT extends LabeledDocument<State, State>> void basicParamsGridSearch(File modelDir,
-			File evalDir, List<AbstractSampler<State, State>> samplers, List<LabeledDocumentT> allDocuments,
+			File evalDir, List<Sampler<State, State>> samplers, List<LabeledDocumentT> allDocuments,
 			AnnotationConfig corpusConfig) {
 		int defaultStep = 10;
 		int defaultEpoch = 5;
@@ -193,20 +195,20 @@ public class EvaluateParameters {
 		evaluateParamConfigs(alpha, n, allDocuments, corpusConfig, "alpha", modelDir, evalDir);
 		evaluateParamConfigs(epoch, n, allDocuments, corpusConfig, "epoch", modelDir, evalDir);
 		evaluateParamConfigs(omega, n, allDocuments, corpusConfig, "omega", modelDir, evalDir);
-		// Log.d("Overall performance:");
+		// log.debug("Overall performance:");
 		// EvaluationUtil.printPerformance(testRecords);
-		Log.d("############################");
-		Log.d("############################");
-		Log.d("############# ALL DONE #############");
-		Log.d("Total time: %s", String.valueOf((System.currentTimeMillis() - time)));
+		log.debug("############################");
+		log.debug("############################");
+		log.debug("############# ALL DONE #############");
+		log.debug("Total time: %s", String.valueOf((System.currentTimeMillis() - time)));
 	}
 
 	private static <LabeledDocumentT extends LabeledDocument<State, State>> void evaluateParamConfigs(
 			List<Params> paramsList, int nCrossValidation, List<LabeledDocumentT> documents,
 			AnnotationConfig corpusConfig, String descriptor, File modelDir, File evalDir) {
-		Log.d("############################");
-		Log.d("############################");
-		Log.d("Evalutate param group: %s", descriptor);
+		log.debug("############################");
+		log.debug("############################");
+		log.debug("Evalutate param group: %s", descriptor);
 		Random rand = new Random(0);
 		long[] seeds = new long[nCrossValidation];
 
@@ -214,12 +216,12 @@ public class EvaluateParameters {
 			seeds[i] = rand.nextLong();
 		}
 		for (Params params : paramsList) {
-			Log.d("############################");
-			Log.d("Evalutate param: %s", params);
+			log.debug("############################");
+			log.debug("Evalutate param: %s", params);
 			for (int i = 0; i < nCrossValidation; i++) {
-				Log.d("############################");
-				Log.d("############################");
-				Log.d("Cross Validation: %s/%s", i + 1, nCrossValidation);
+				log.debug("############################");
+				log.debug("############################");
+				log.debug("Cross Validation: %s/%s", i + 1, nCrossValidation);
 				DataSplit<LabeledDocumentT> split = new DataSplit<>(documents, 0.8);
 				List<LabeledDocumentT> train = split.getTrain();
 				List<LabeledDocumentT> test = split.getTest();
@@ -246,10 +248,10 @@ public class EvaluateParameters {
 
 				Learner<State> learner = new DefaultLearner<>(model, 0.1);
 
-				Log.d("Train/test split: %s => #train: %s, #test: %s", split.getSplit(), train.size(), test.size());
+				log.debug("Train/test split: %s => #train: %s, #test: %s", split.getSplit(), train.size(), test.size());
 
-				Log.d("####################");
-				Log.d("Start learning");
+				log.debug("####################");
+				log.debug("Start learning");
 				trainer.train(sampler, initializer, learner, train, params.numberOfEpochs);
 				try {
 					model.saveModelToFile(new File(modelDir,
@@ -317,7 +319,7 @@ public class EvaluateParameters {
 	 * "Record_alpha_test_NCrossVal-2_(steps-10_epochs-5_initAlpha-0.1_finalAlpha-0.1_initOmega-0.0_finalOmega_0.0)_2015-8-31_19-4-18"
 	 * );
 	 * 
-	 * Log.d("# Compute alpha scores..."); List<Double> alphaScores =
+	 * log.debug("# Compute alpha scores..."); List<Double> alphaScores =
 	 * computeMeanScores(alpha);
 	 * 
 	 * List<String>[] omega = new List[5]; omega[0] = new ArrayList<>();
@@ -364,15 +366,15 @@ public class EvaluateParameters {
 	 * "Record_omega_test_NCrossVal-2_(steps-10_epochs-5_initAlpha-0.1_finalAlpha-0.01_initOmega-1.0_finalOmega_1.0)_2015-8-31_20-20-28"
 	 * );
 	 * 
-	 * Log.d("# Compute omega scores..."); List<Score> omegaScores =
+	 * log.debug("# Compute omega scores..."); List<Score> omegaScores =
 	 * computeMeanScores(omega);
 	 * 
-	 * Log.d("#################"); Log.d("##### Alpha #####"); Log.d(
-	 * "0.01->0.01, 0.1->0.01, 0.1->0.1");
+	 * log.debug("#################"); log.debug("##### Alpha #####");
+	 * log.debug( "0.01->0.01, 0.1->0.01, 0.1->0.1");
 	 * EvaluationUtil.printScores(alphaScores);
 	 * 
-	 * Log.d("#################"); Log.d("##### Omega #####"); Log.d(
-	 * "0->0, 0.5->0, 1->0, 1->0.5, 1->1");
+	 * log.debug("#################"); log.debug("##### Omega #####");
+	 * log.debug( "0->0, 0.5->0, 1->0, 1->0.5, 1->1");
 	 * EvaluationUtil.printScores(omegaScores); }
 	 * 
 	 * public static void visualizeBasicParamGridSearch() { List<String>[] alpha
@@ -403,7 +405,7 @@ public class EvaluateParameters {
 	 * "Record_alpha_test_NCrossVal-2_(steps-10_epochs-5_initAlpha-0.1_finalAlpha-0.01_initOmega-1.0_finalOmega_0.0)_2015-8-8_6-2-36"
 	 * );
 	 * 
-	 * Log.d("# Compute alpha scores..."); List<Score> alphaScores =
+	 * log.debug("# Compute alpha scores..."); List<Score> alphaScores =
 	 * computeMeanScores(alpha);
 	 * 
 	 * List<String>[] epoch = new List[3]; epoch[0] = new ArrayList<>();
@@ -431,7 +433,7 @@ public class EvaluateParameters {
 	 * "Record_epoch_test_NCrossVal-2_(steps-10_epochs-10_initAlpha-0.01_finalAlpha-0.001_initOmega-1.0_finalOmega_0.0)_2015-8-8_22-35-26"
 	 * );
 	 * 
-	 * Log.d("# Compute epoch scores..."); List<Score> epochScores =
+	 * log.debug("# Compute epoch scores..."); List<Score> epochScores =
 	 * computeMeanScores(epoch);
 	 * 
 	 * List<String>[] omega = new List[3]; omega[0] = new ArrayList<>();
@@ -459,7 +461,7 @@ public class EvaluateParameters {
 	 * "Record_omega_test_NCrossVal-2_(steps-10_epochs-5_initAlpha-0.01_finalAlpha-0.001_initOmega-1.0_finalOmega_0.5)_2015-8-9_4-56-51"
 	 * );
 	 * 
-	 * Log.d("# Compute omega scores..."); List<Score> omegaScores =
+	 * log.debug("# Compute omega scores..."); List<Score> omegaScores =
 	 * computeMeanScores(omega);
 	 * 
 	 * List<String>[] step = new List[3]; step[0] = new ArrayList<>(); step[1] =
@@ -487,38 +489,40 @@ public class EvaluateParameters {
 	 * "Record_step_test_NCrossVal-2_(steps-15_epochs-5_initAlpha-0.01_finalAlpha-0.001_initOmega-1.0_finalOmega_0.0)_2015-8-8_2-52-7"
 	 * );
 	 * 
-	 * Log.d("# Compute step scores..."); List<Score> stepScores =
+	 * log.debug("# Compute step scores..."); List<Score> stepScores =
 	 * computeMeanScores(step);
 	 * 
-	 * Log.d("#################"); Log.d("##### Alpha #####"); Log.d(
-	 * "0.001->0.0001, 0.01->0.001, 0.1->0.01");
+	 * log.debug("#################"); log.debug("##### Alpha #####");
+	 * log.debug( "0.001->0.0001, 0.01->0.001, 0.1->0.01");
 	 * EvaluationUtil.printScores(alphaScores);
 	 * 
-	 * Log.d("#################"); Log.d("##### Epoch #####"); Log.d("1, 5, 10"
-	 * ); EvaluationUtil.printScores(epochScores);
+	 * log.debug("#################"); log.debug("##### Epoch #####");
+	 * log.debug("1, 5, 10" ); EvaluationUtil.printScores(epochScores);
 	 * 
-	 * Log.d("#################"); Log.d("##### Omega #####"); Log.d(
-	 * "0->0, 1->0, 1->0.5"); EvaluationUtil.printScores(omegaScores);
+	 * log.debug("#################"); log.debug("##### Omega #####");
+	 * log.debug( "0->0, 1->0, 1->0.5");
+	 * EvaluationUtil.printScores(omegaScores);
 	 * 
-	 * Log.d("################"); Log.d("##### Step #####"); Log.d("5, 10, 15");
-	 * EvaluationUtil.printScores(stepScores); }
+	 * log.debug("################"); log.debug("##### Step #####"); log.debug(
+	 * "5, 10, 15"); EvaluationUtil.printScores(stepScores); }
 	 * 
 	 * private static List<Double> computeMeanScores(List<String>[]
 	 * paramFilenames) { List<Score> paramScores = new ArrayList<>(); for
 	 * (List<String> crossValNames : paramFilenames) {
 	 * List<SamplingProcedureRecord> crossValRecords = new ArrayList<>();
 	 * 
-	 * Log.d("load cross validation files for param config..."); for (String s :
-	 * crossValNames) { try { crossValRecords.add(EvaluationUtil.loadRecord(new
+	 * log.debug("load cross validation files for param config..."); for (String
+	 * s : crossValNames) { try {
+	 * crossValRecords.add(EvaluationUtil.loadRecord(new
 	 * File(BIONLP_EVAL_DIR_PATH, s).getPath())); } catch (FileNotFoundException
 	 * e) { e.printStackTrace(); } catch (ClassNotFoundException e) {
 	 * e.printStackTrace(); } catch (IOException e) { e.printStackTrace(); } }
 	 * 
-	 * Log.d("compute mean for individual model..."); List<Score> crossValScores
-	 * = new ArrayList<>(); for (SamplingProcedureRecord r : crossValRecords) {
-	 * crossValScores.add(EvaluationUtil.mean(r)); }
+	 * log.debug("compute mean for individual model..."); List<Score>
+	 * crossValScores = new ArrayList<>(); for (SamplingProcedureRecord r :
+	 * crossValRecords) { crossValScores.add(EvaluationUtil.mean(r)); }
 	 * 
-	 * Log.d("compute mean over cross validations...");
+	 * log.debug("compute mean over cross validations...");
 	 * paramScores.add(EvaluationUtil.mean(crossValScores)); } return
 	 * paramScores; }
 	 */

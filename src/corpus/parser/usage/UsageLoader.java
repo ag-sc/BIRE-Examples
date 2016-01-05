@@ -8,14 +8,16 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import corpus.LabeledDocument;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import corpus.DatasetConfig;
 import corpus.DefaultCorpus;
-import logging.Log;
+import corpus.LabeledDocument;
 import variables.State;
 
 public class UsageLoader {
-
+	private static Logger log = LogManager.getFormatterLogger();
 	public static void main(String[] args) {
 		convertDatasetToJavaBinaries(DatasetConfig.getUSAGEJavaBinFilepath());
 	}
@@ -34,7 +36,7 @@ public class UsageLoader {
 		try {
 			System.out.println("store");
 			saveCorpusToFile(corpus, destFilepath);
-			Log.d("Corpus (%s documents) successfully parsed and stored to file \"%s\"", corpus.getDocuments().size(),
+			log.debug("Corpus (%s documents) successfully parsed and stored to file \"%s\"", corpus.getDocuments().size(),
 					destFilepath);
 			System.out.println("done!");
 			return corpus;

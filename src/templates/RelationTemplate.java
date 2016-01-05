@@ -15,7 +15,6 @@ import changes.StateChange;
 import factors.AbstractFactor;
 import factors.EntityAndArgumentFactor;
 import learning.Vector;
-import logging.Log;
 import utility.VariableID;
 import variables.ArgumentRole;
 import variables.EntityAnnotation;
@@ -40,7 +39,7 @@ public class RelationTemplate extends AbstractTemplate<State>implements Serializ
 
 			EntityType argType = argEntity.getType();
 
-			Log.d("%s: Add features to entity %s (\"%s\"):", this.getClass().getSimpleName(), mainEntity.getID(),
+			log.debug("%s: Add features to entity %s (\"%s\"):", this.getClass().getSimpleName(), mainEntity.getID(),
 					mainEntity.getText());
 
 			Vector featureVector = new Vector();
@@ -57,6 +56,7 @@ public class RelationTemplate extends AbstractTemplate<State>implements Serializ
 			featureVector.set("ENTITY_TYPE=" + entityType.getName() + " & ARG_TYPE=" + argType.getName()
 					+ " & ARG_ROLE=" + argRole, 1.0);
 
+			
 			for (int i = 0; i < 4; i++) {
 				double distanceFeatureValue = Math.abs(distance(mainEntity, argEntity)) > i ? 1 : 0;
 				featureVector.set("DISTANCE_FROM_ENTITY=" + entityAsText + "_TO_ARGUMENT_ROLE=" + argRole + ">" + i,
@@ -75,7 +75,7 @@ public class RelationTemplate extends AbstractTemplate<State>implements Serializ
 					isAfter(mainEntity, argEntity));
 			featureVector.set("ENTITY_AFTER_ARGUMENT_ROLE=" + argRole, isAfter(mainEntity, argEntity));
 
-			Log.d("%s: Features for entity %s (\"%s\"): %s", this.getClass().getSimpleName(), mainEntity.getID(),
+			log.debug("%s: Features for entity %s (\"%s\"): %s", this.getClass().getSimpleName(), mainEntity.getID(),
 					mainEntity.getText(), featureVector);
 			factor.setFeatures(featureVector);
 		} else {

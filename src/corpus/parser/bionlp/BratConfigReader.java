@@ -13,15 +13,17 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import corpus.AnnotationConfig;
 import corpus.EntityTypeDefinition;
-import logging.Log;
 import variables.Argument;
 import variables.ArgumentRole;
-import variables.EntityType;
 
 public class BratConfigReader {
 
+	private static Logger log = LogManager.getFormatterLogger();
 	private static final String COMMENT_INDICATOR = "#";
 	private static final String SEPARATION_INDICATOR = "-";
 	private static final String ENTITY_SECTION = "[entities]";
@@ -41,7 +43,6 @@ public class BratConfigReader {
 	 * @return
 	 */
 	public synchronized AnnotationConfig readConfig(File configFile) {
-		Log.off();
 		try {
 			eventReferencingArguments = new HashSet<Argument>();
 			events = new HashSet<EntityTypeDefinition>();
@@ -52,13 +53,13 @@ public class BratConfigReader {
 			int lineNumber = 1;
 			while ((line = reader.readLine()) != null) {
 				if (line.startsWith(COMMENT_INDICATOR)) {
-					Log.i(lineNumber + ": Skip comment " + ": \"" + line + "\"");
+					log.info(lineNumber + ": Skip comment " + ": \"" + line + "\"");
 				} else if (line.startsWith(SEPARATION_INDICATOR)) {
-					Log.i(lineNumber + ": Separation line");
+					log.info(lineNumber + ": Separation line");
 				} else if (line.trim().length() == 0) {
-					Log.i(lineNumber + ": Empty line ignored");
+					log.info(lineNumber + ": Empty line ignored");
 				} else {
-					Log.i(lineNumber + ": parse...");
+					log.info(lineNumber + ": parse...");
 					state = parseLine(config, line, state);
 				}
 				lineNumber++;
@@ -92,16 +93,16 @@ public class BratConfigReader {
 	private ParseState parseLine(AnnotationConfig config, String line, ParseState state) {
 
 		if (line.equals(ENTITY_SECTION)) {
-			Log.i("Begin of entity section");
+			log.info("Begin of entity section");
 			state = ParseState.ENTITIES;
 		} else if (line.equals(EVENT_SECTION)) {
-			Log.i("Begin of event section");
+			log.info("Begin of event section");
 			state = ParseState.EVENTS;
 		} else if (line.equals(RELATION_SECTION)) {
-			Log.i("Begin of relation section");
+			log.info("Begin of relation section");
 			state = ParseState.RELATIONS;
 		} else if (line.equals(ATTRIBUTE_SECTION)) {
-			Log.i("Begin of attribute section");
+			log.info("Begin of attribute section");
 			state = ParseState.ATTRIBUTES;
 		} else {
 			if (state != null) {
@@ -134,7 +135,7 @@ public class BratConfigReader {
 			config.addEntityType(type);
 		}
 		if (tokenizer.hasMoreTokens()) {
-			Log.i("Warning: line contains no supported entity: " + line);
+			log.info("Warning: line contains no supported entity: " + line);
 		}
 	}
 
@@ -148,11 +149,11 @@ public class BratConfigReader {
 		 *  Positive_regulation Theme:<EVENT>|Protein, Cause?:<EVENT>|Protein, Site?:Entity, CSite?:Entity
 		 */
 		String[] typeArgSplit = line.split("\t", 2);
-		Log.i("typeArgSplit: " + arrayToString(typeArgSplit));
+		log.info("typeArgSplit: " + arrayToString(typeArgSplit));
 		String typeName = typeArgSplit[0];
 		String args = typeArgSplit[1];
 		String argsSplit[] = args.split("\\s");
-		Log.i("argsSplit: " + arrayToString(argsSplit));
+		log.info("argsSplit: " + arrayToString(argsSplit));
 
 		Map<ArgumentRole, Argument> coreArguments = new HashMap<ArgumentRole, Argument>();
 		Map<ArgumentRole, Argument> optionalArguments = new HashMap<ArgumentRole, Argument>();
@@ -178,13 +179,13 @@ public class BratConfigReader {
 
 	private Argument extractEventArgument(String arg) {
 		String[] roleArgSplit = arg.split("\\:");
-		Log.i("roleArgSplit: " + arrayToString(roleArgSplit));
+		log.info("roleArgSplit: " + arrayToString(roleArgSplit));
 		String role = roleArgSplit[0];
 		if (role.endsWith("?") || role.endsWith("*") || role.endsWith("+")) {
 			role = role.substring(0, role.length() - 1);
 		}
 		String[] args = roleArgSplit[1].split("\\|");
-		Log.i("args: " + arrayToString(args));
+		log.info("args: " + arrayToString(args));
 		List<String> types = new ArrayList<String>();
 		boolean isEventReferencingPossible = false;
 		for (int i = 0; i < args.length; i++) {
